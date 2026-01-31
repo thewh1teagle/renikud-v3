@@ -1,0 +1,14 @@
+[project]
+name = "renikud-v3"
+version = "0.1.0"
+description = "Rethinking Hebrew nikud with a new approach to models and G2P"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv.workspace]
+members = [
+    "bert-nikud",
+    "whisper-nikud",
+    "renikud-onnx",
+]

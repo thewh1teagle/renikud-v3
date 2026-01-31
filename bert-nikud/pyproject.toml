@@ -1,0 +1,23 @@
+[project]
+name = "renikud-v2"
+version = "0.1.0"
+description = "Rethinking Hebrew nikud with a new approach to models and G2P"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "accelerate>=1.12.0",
+    "datasets>=4.4.1",
+    "jiwer>=4.0.0",
+    "nvitop>=1.6.0",
+    "regex>=2025.11.3",
+    "tensorboard>=2.20.0",
+    "torch>=2.9.1",
+    "tqdm>=4.67.1",
+    "transformers>=4.57.1",
+    "wandb>=0.23.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.6",
+]

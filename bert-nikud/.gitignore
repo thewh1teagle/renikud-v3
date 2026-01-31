@@ -1,0 +1,25 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Model checkpoints
+checkpoints/
+!checkpoints/.gitkeep
+wandb/
+*.7z
+*.txt
+*.pt
+data/
+!data/train_example.txt
+*.onnx
+*.onnx.data
+
+# Dataset cache
+.dataset_cache/
