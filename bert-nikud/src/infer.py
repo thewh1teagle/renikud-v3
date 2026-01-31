@@ -150,7 +150,7 @@ def main():
     parser.add_argument(
         "--tokenizer",
         type=str,
-        default="tokenizer/dictabert-large-char-menaked",
+        default="dicta-il/dictabert-large-char-menaked",
         help="Tokenizer path or name",
     )
 

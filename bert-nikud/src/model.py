@@ -231,7 +231,7 @@ class HebrewNikudModel(nn.Module):
 
 def load_model(
     checkpoint_path: str,
-    tokenizer_path: str = "tokenizer/dictabert-large-char-menaked",
+    tokenizer_path: str = "dicta-il/dictabert-large-char-menaked",
     device: str = "cpu",
 ) -> Tuple[HebrewNikudModel, object]:
     """

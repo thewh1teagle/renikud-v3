@@ -36,4 +36,4 @@ def load_tokenizer(tokenizer_path: str):
                 tokenizer.model_max_length = model_max_length
         return tokenizer
 
-    return AutoTokenizer.from_pretrained(tokenizer_path, use_fast=True)
+    return AutoTokenizer.from_pretrained(tokenizer_path, use_fast=True, trust_remote_code=True)

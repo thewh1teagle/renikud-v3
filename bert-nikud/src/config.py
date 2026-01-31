@@ -86,7 +86,7 @@ def get_args():
     parser.add_argument(
         "--tokenizer-path",
         type=str,
-        default="tokenizer/dictabert-large-char-menaked",
+        default="dicta-il/dictabert-large-char-menaked",
         help="Tokenizer path or name",
     )
     parser.add_argument("--dropout", type=float, default=0.1, help="Dropout rate")
