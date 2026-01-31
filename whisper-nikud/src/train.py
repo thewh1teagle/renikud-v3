@@ -17,10 +17,7 @@ uv run wandb login
 """
 
 import datasets
-import os
-import torch
 from pathlib import Path
-from typing import Any, Dict, List, Union
 from transformers import (
     WhisperProcessor,
     WhisperForConditionalGeneration,
@@ -34,15 +31,18 @@ from eval import compute_metrics
 
 args = get_args()
 
+
 def main():
     # Load processor and model
-    processor = WhisperProcessor.from_pretrained(args.model_name, language="Hebrew", task="transcribe")
+    processor = WhisperProcessor.from_pretrained(
+        args.model_name, language="Hebrew", task="transcribe"
+    )
     model = WhisperForConditionalGeneration.from_pretrained(args.model_name)
 
     # Set generation config
     model.generation_config.language = "hebrew"
     model.generation_config.task = "transcribe"
-    model.generation_config.forced_decoder_ids = None # Deprecated
+    model.generation_config.forced_decoder_ids = None  # Deprecated
 
     # Load dataset from cache (output of src/pre_tokenize.py)
     if not Path(args.dataset_cache_path).exists():
@@ -100,6 +100,7 @@ def main():
 
     # Save model
     trainer.save_model()
+
 
 if __name__ == "__main__":
     main()

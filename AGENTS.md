@@ -29,3 +29,7 @@ Think in agent mode, not human mode.
 Assume nonstop focus, parallel moves, and instant iteration.
 Push timelines aggressively, speed is the default.
 If something feels heavy, split it until it becomes obvious and fast.
+
+## Code Quality
+
+After many edits: `uv run ruff format` → `uv run ruff check` → if failed `uv run ruff check --fix` → fix manually if needed.

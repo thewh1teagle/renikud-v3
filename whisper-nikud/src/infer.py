@@ -1,4 +1,3 @@
-
 """
 Usage:
 wget https://github.com/thewh1teagle/phonikud-chatterbox/releases/download/asset-files-v1/female1.wav -O example1.wav
@@ -16,7 +15,6 @@ uv run src/infer.py --model ivrit-ai/whisper-large-v3-turbo
 uv run src/infer.py --model thewh1teagle/whisper-heb-nikud
 """
 
-
 import torch
 from transformers import pipeline
 import gradio as gr
@@ -26,16 +24,17 @@ from pydub.effects import normalize
 import tempfile
 import os
 
+
 def main():
     parser = argparse.ArgumentParser(description="Whisper Transcription Demo")
     parser.add_argument(
-        "--model", 
-        type=str, 
+        "--model",
+        type=str,
         default="thewh1teagle/whisper-heb-nikud",
-        help="Model name or path for Whisper (default: ivrit-ai/whisper-large-v3-turbo)"
+        help="Model name or path for Whisper (default: ivrit-ai/whisper-large-v3-turbo)",
     )
     args = parser.parse_args()
-    
+
     MODEL_NAME = args.model
     BATCH_SIZE = 8
 
@@ -53,10 +52,10 @@ def main():
         try:
             # Load audio file
             audio = AudioSegment.from_file(file_path)
-            
+
             # Normalize the audio (adjusts volume to optimal level)
             normalized_audio = normalize(audio)
-            
+
             # Create a temporary file for the normalized audio
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
                 normalized_audio.export(temp_file.name, format="wav")
@@ -69,9 +68,11 @@ def main():
     def transcribe(file, task):
         # Normalize the audio before transcription
         normalized_file = normalize_audio(file)
-        
+
         try:
-            outputs = pipe(normalized_file, batch_size=BATCH_SIZE, generate_kwargs={"task": task})
+            outputs = pipe(
+                normalized_file, batch_size=BATCH_SIZE, generate_kwargs={"task": task}
+            )
             text = outputs["text"]
             return text
         finally:
@@ -80,7 +81,9 @@ def main():
                 try:
                     os.unlink(normalized_file)
                 except Exception as e:
-                    print(f"Warning: Could not delete temporary file {normalized_file}: {e}")
+                    print(
+                        f"Warning: Could not delete temporary file {normalized_file}: {e}"
+                    )
 
     demo = gr.Blocks(
         css="""
@@ -98,13 +101,13 @@ def main():
             gr.Radio(["transcribe", "translate"], label="Task", value="transcribe"),
         ],
         outputs=gr.Textbox(
-            label="Transcription", 
-            lines=6, 
-            max_lines=15, 
+            label="Transcription",
+            lines=6,
+            max_lines=15,
             min_width=400,
             show_copy_button=True,
             placeholder="Transcribed text will appear here...",
-            elem_classes=["large-textbox"]
+            elem_classes=["large-textbox"],
         ),
         theme="huggingface",
         title="Whisper Demo: Transcribe Audio",
@@ -123,13 +126,13 @@ def main():
             gr.Radio(["transcribe", "translate"], label="Task", value="transcribe"),
         ],
         outputs=gr.Textbox(
-            label="Transcription", 
-            lines=6, 
-            max_lines=15, 
+            label="Transcription",
+            lines=6,
+            max_lines=15,
             min_width=400,
             show_copy_button=True,
             placeholder="Transcribed text will appear here...",
-            elem_classes=["large-textbox"]
+            elem_classes=["large-textbox"],
         ),
         theme="huggingface",
         title="Whisper Demo: Transcribe Audio",
@@ -146,7 +149,10 @@ def main():
     )
 
     with demo:
-        gr.TabbedInterface([file_transcribe, mic_transcribe], ["Transcribe Audio File", "Transcribe Microphone"])
+        gr.TabbedInterface(
+            [file_transcribe, mic_transcribe],
+            ["Transcribe Audio File", "Transcribe Microphone"],
+        )
 
     demo.launch(server_name="0.0.0.0", server_port=7860)
 

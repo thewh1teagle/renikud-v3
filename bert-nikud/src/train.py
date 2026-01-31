@@ -31,38 +31,42 @@ def main():
     """Main training function with HuggingFace Trainer."""
     # Parse configuration
     config = get_args()
-    
+
     print("=" * 80)
     print("Hebrew Nikud Training")
     print("=" * 80)
     print("Configuration:")
     for key, value in vars(config).items():
-        if not key.startswith('_'):
+        if not key.startswith("_"):
             print(f"  {key}: {value}")
     print("=" * 80)
-    
+
     # Load tokenizer
     print("\nLoading tokenizer and data...")
     tokenizer = AutoTokenizer.from_pretrained(config.model_name)
-    
+
     # Load and split dataset
     texts = load_dataset_from_file(config.train_file)
     train_texts, eval_texts = split_dataset(texts, config.eval_max_lines, config.seed)
-    print(f"Loaded {len(texts)} texts ({len(train_texts)} train, {len(eval_texts)} eval)")
-    
+    print(
+        f"Loaded {len(texts)} texts ({len(train_texts)} train, {len(eval_texts)} eval)"
+    )
+
     # Create datasets
     train_dataset = NikudDataset(train_texts, tokenizer, use_cache=config.cache_dataset)
     eval_dataset = NikudDataset(eval_texts, tokenizer, use_cache=config.cache_dataset)
-    
+
     # Initialize model
     print("\nInitializing model...")
     model = HebrewNikudModel(model_name=config.model_name, dropout=config.dropout)
     total_params, trainable_params = count_parameters(model)
-    print(f"Model: {total_params:,} parameters (~{total_params * 4 / (1024**2):.1f} MB)")
-    
+    print(
+        f"Model: {total_params:,} parameters (~{total_params * 4 / (1024**2):.1f} MB)"
+    )
+
     # Create checkpoint directory
     Path(config.checkpoint_dir).mkdir(parents=True, exist_ok=True)
-    
+
     # Setup training arguments
     training_args = TrainingArguments(
         output_dir=config.checkpoint_dir,
@@ -87,7 +91,7 @@ def main():
         dataloader_pin_memory=True,
         remove_unused_columns=False,
     )
-    
+
     # Create trainer
     print(f"\nStarting training for {config.max_epochs} epochs...")
     print("=" * 80)
@@ -99,20 +103,20 @@ def main():
         data_collator=collate_fn,
         processing_class=tokenizer,
     )
-    
+
     # Train (with optional resume)
     resume_checkpoint = None
     if config.resume == "auto":
         resume_checkpoint = True  # Auto-detect latest checkpoint
     elif config.resume:
         resume_checkpoint = config.resume  # Use specified checkpoint
-    
+
     trainer.train(resume_from_checkpoint=resume_checkpoint)
-    
+
     # Save final model
-    final_path = Path(config.checkpoint_dir) / 'final_model.pt'
+    final_path = Path(config.checkpoint_dir) / "final_model.pt"
     torch.save(model.state_dict(), final_path)
-    
+
     # Print final summary
     best_metrics = trainer.state.best_metric
     print("\n" + "=" * 80)
@@ -123,5 +127,5 @@ def main():
     print("=" * 80)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -16,7 +16,9 @@ from data import load_dataset_from_csv, preprocess_dataset
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", type=str, required=True)
-    parser.add_argument("--model_name", type=str, default="ivrit-ai/whisper-large-v3-turbo")
+    parser.add_argument(
+        "--model_name", type=str, default="ivrit-ai/whisper-large-v3-turbo"
+    )
     parser.add_argument("--dataset_cache_path", type=str, default="./.dataset-cache")
     parser.add_argument("--batch_size", type=int, default=16)
     return parser.parse_args()
