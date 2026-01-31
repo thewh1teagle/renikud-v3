@@ -16,25 +16,25 @@ def get_args():
 
     # Dataset arguments
     parser.add_argument(
-        "--train-file",
+        "--dataset-dir",
         type=str,
-        default="dataset/train.txt",
-        help="Path to training data file",
+        default="dataset",
+        help="Directory with pretokenized datasets (run pretokenize.py first)",
     )
     parser.add_argument(
-        "--eval-file",
+        "--train-split",
         type=str,
-        default="dataset/val.txt",
-        help="Path to evaluation data file",
+        default="train",
+        help="Name of training split in .cache/ (e.g. train)",
+    )
+    parser.add_argument(
+        "--eval-split",
+        type=str,
+        default="val",
+        help="Name of eval split in .cache/ (e.g. val, val_200)",
     )
     parser.add_argument(
         "--seed", type=int, default=42, help="Random seed for reproducibility"
-    )
-    parser.add_argument(
-        "--cache-dataset",
-        action="store_true",
-        default=False,
-        help="Cache processed dataset for faster loading",
     )
 
     # Training arguments

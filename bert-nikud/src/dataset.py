@@ -4,15 +4,13 @@ Dataset preparation for Hebrew nikud prediction.
 This module handles:
 - Creating input/label pairs for training
 - Hybrid encoding: vowels as multi-class (0-7), others as binary
+- Loading pretokenized Arrow datasets
 """
 
 from typing import List
 import torch
-from tqdm import tqdm
-import hashlib
-import pickle
-import os
 from pathlib import Path
+from datasets import load_from_disk
 from encode import extract_nikud_labels
 from constants import A_PATAH, E_TSERE, I_HIRIK, O_HOLAM, U_QUBUT, SHVA, E_VOCAL_SHVA
 
@@ -43,7 +41,7 @@ ID_TO_VOWEL = {v: k for k, v in VOWEL_TO_ID.items()}
 
 def tokenize_with_offsets(text: str, tokenizer) -> dict:
     """
-    Tokenize text with offset mapping to avoid UNK tokens.
+    Tokenize text with offset mapping.
 
     Args:
         text: Plain text to tokenize
@@ -68,49 +66,6 @@ def tokenize_with_offsets(text: str, tokenizer) -> dict:
     }
 
 
-def _load_or_process_dataset(
-    texts: List[str], tokenizer, cache_dir: str, use_cache: bool
-) -> List[dict]:
-    """Load dataset from cache or process and cache it."""
-    # If caching disabled, just process
-    if not use_cache:
-        print(f"Processing {len(texts)} texts (caching disabled)...")
-        return [
-            prepare_training_data(text, tokenizer)
-            for text in tqdm(texts, desc="Preparing dataset", unit="texts")
-        ]
-
-    # Caching enabled
-    Path(cache_dir).mkdir(exist_ok=True)
-
-    # Generate cache key
-    data_str = "".join(texts) + str(tokenizer.vocab_size)
-    data_hash = hashlib.md5(data_str.encode()).hexdigest()
-    cache_path = os.path.join(cache_dir, f"dataset_{data_hash}.pkl")
-
-    # Try loading from cache
-    if os.path.exists(cache_path):
-        print(f"Loading cached dataset from {cache_path}...")
-        with open(cache_path, "rb") as f:
-            data = pickle.load(f)
-        print(f"Loaded {len(data)} cached samples")
-        return data
-
-    # Process and cache
-    print(f"Processing {len(texts)} texts...")
-    data = [
-        prepare_training_data(text, tokenizer)
-        for text in tqdm(texts, desc="Preparing dataset", unit="texts")
-    ]
-
-    print(f"Saving dataset to cache: {cache_path}")
-    with open(cache_path, "wb") as f:
-        pickle.dump(data, f)
-    print(f"Cached {len(data)} samples")
-
-    return data
-
-
 def prepare_training_data(nikud_text: str, tokenizer) -> dict:
     """
     Prepare training data from nikud'd Hebrew text.
@@ -124,15 +79,14 @@ def prepare_training_data(nikud_text: str, tokenizer) -> dict:
     """
     plain_text, labels = extract_nikud_labels(nikud_text)
 
-    # Tokenize the plain text with offset mapping to avoid UNK tokens
+    # Tokenize the plain text with offset mapping
     encoding = tokenize_with_offsets(plain_text, tokenizer)
     input_ids = encoding["input_ids"]
     attention_mask = encoding["attention_mask"]
     offset_mapping = encoding["offset_mapping"]
     num_tokens = len(input_ids)
 
-    # Create label tensors
-    # Labels for special tokens should be -100 (ignored in loss)
+    # Create label tensors (-100 = ignored in loss)
     vowel_labels = torch.full((num_tokens,), -100, dtype=torch.long)
     dagesh_labels = torch.full((num_tokens,), -100, dtype=torch.long)
     sin_labels = torch.full((num_tokens,), -100, dtype=torch.long)
@@ -140,7 +94,6 @@ def prepare_training_data(nikud_text: str, tokenizer) -> dict:
     prefix_labels = torch.full((num_tokens,), -100, dtype=torch.long)
 
     # Fill in labels for actual characters (skip [CLS] at position 0)
-    # Assuming character-level tokenization: token i corresponds to character i-1
     for i, label in enumerate(labels):
         token_idx = i + 1  # +1 to account for [CLS] token
         if token_idx < num_tokens - 1:  # -1 to avoid [SEP]
@@ -158,86 +111,44 @@ def prepare_training_data(nikud_text: str, tokenizer) -> dict:
         "sin_labels": sin_labels,
         "stress_labels": stress_labels,
         "prefix_labels": prefix_labels,
-        "offset_mapping": offset_mapping,  # Save for reconstruction
+        "offset_mapping": offset_mapping,
         "plain_text": plain_text,
-        "original_text": nikud_text,  # Already in NFD format
+        "original_text": nikud_text,
     }
 
 
-class NikudDataset(torch.utils.data.Dataset):
-    """PyTorch Dataset for Hebrew nikud prediction."""
-
-    def __init__(
-        self,
-        texts: List[str],
-        tokenizer,
-        cache_dir: str = ".dataset_cache",
-        use_cache: bool = True,
-    ):
-        """
-        Args:
-            texts: List of Hebrew texts with nikud marks
-            tokenizer: HuggingFace tokenizer
-            cache_dir: Directory to cache processed datasets
-            use_cache: Whether to cache the processed dataset
-        """
-        self.data = _load_or_process_dataset(texts, tokenizer, cache_dir, use_cache)
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        return self.data[idx]
-
-
 def load_dataset_from_file(file_path: str) -> List[str]:
-    """
-    Load Hebrew texts from a file.
-
-    Args:
-        file_path: Path to text file (one text per line)
-
-    Returns:
-        List of texts with nikud marks
-    """
+    """Load Hebrew texts from a file (one text per line)."""
     texts = []
     with open(file_path, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
-            if line:  # Skip empty lines
+            if line:
                 texts.append(line)
     return texts
 
 
-def split_dataset(texts: List[str], eval_max_lines: int, seed: int = 42) -> tuple:
+def load_pretokenized(dataset_dir: str, split: str):
     """
-    Split dataset into train and eval sets.
+    Load a pretokenized Arrow dataset.
 
     Args:
-        texts: List of texts with nikud marks
-        eval_max_lines: Maximum number of lines to use for evaluation
-        seed: Random seed for reproducibility
+        dataset_dir: Directory containing .cache/ subdirectory
+        split: Split name (e.g. "train", "val", "val_200")
 
     Returns:
-        Tuple of (train_texts, eval_texts)
+        HuggingFace Dataset
     """
-    import random
-
-    # Set seed for reproducibility
-    random.seed(seed)
-
-    # Shuffle texts
-    shuffled_texts = texts.copy()
-    random.shuffle(shuffled_texts)
-
-    # Use minimum of eval_max_lines and total texts
-    eval_size = min(eval_max_lines, len(shuffled_texts))
-
-    # Split
-    eval_texts = shuffled_texts[:eval_size]
-    train_texts = shuffled_texts[eval_size:]
-
-    return train_texts, eval_texts
+    cache_path = Path(dataset_dir) / ".cache" / split
+    if not cache_path.exists():
+        raise FileNotFoundError(
+            f"Pretokenized dataset not found at {cache_path}. "
+            f"Run: uv run python src/pretokenize.py --dataset-dir {dataset_dir}"
+        )
+    ds = load_from_disk(str(cache_path))
+    ds.set_format("torch")
+    print(f"Loaded {len(ds)} samples from {cache_path}")
+    return ds
 
 
 def collate_fn(batch: List[dict]) -> dict:
@@ -245,7 +156,7 @@ def collate_fn(batch: List[dict]) -> dict:
     Collate function for DataLoader to handle variable-length sequences.
 
     Args:
-        batch: List of data dictionaries from NikudDataset
+        batch: List of data dictionaries
 
     Returns:
         Dictionary with batched and padded tensors

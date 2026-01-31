@@ -1,20 +1,23 @@
 """
 Training script for Hebrew Nikud BERT model with HuggingFace Trainer.
 
-Train the model on Hebrew text with nikud:
-    uv run python src/train.py \
-        --train-file dataset/train.txt \
-        --eval-file dataset/val.txt \
+Pretokenize first:
+    uv run python src/pretokenize.py --dataset-dir dataset
+
+Train:
+    uv run accelerate launch src/train.py \
+        --dataset-dir dataset \
+        --eval-split val_200 \
         --batch-size 16 \
         --max-epochs 999999 \
         --lr 1e-4 \
-        --checkpoint-dir checkpoints/run_1m \
+        --checkpoint-dir checkpoints/run_5m \
         --wandb-mode online \
         --wandb-project renikud-v2 \
-        --wandb-run-name run_1m
+        --wandb-run-name run_5m
 
-Resume training from checkpoint:
-    uv run python src/train.py --resume checkpoints/run_1m/checkpoint-6000
+Resume from checkpoint:
+    uv run accelerate launch src/train.py --resume checkpoints/run_5m/checkpoint-6000
 """
 
 import torch
@@ -22,7 +25,7 @@ from transformers import TrainingArguments
 from pathlib import Path
 
 from model import HebrewNikudModel, count_parameters
-from dataset import NikudDataset, load_dataset_from_file, collate_fn
+from dataset import load_pretokenized, collate_fn
 from trainer import NikudTrainer
 from config import get_args
 from tokenizer_utils import load_tokenizer
@@ -30,7 +33,6 @@ from tokenizer_utils import load_tokenizer
 
 def main():
     """Main training function with HuggingFace Trainer."""
-    # Parse configuration
     config = get_args()
 
     print("=" * 80)
@@ -46,14 +48,9 @@ def main():
     print("\nLoading tokenizer and data...")
     tokenizer = load_tokenizer(config.tokenizer_path)
 
-    # Load pre-split datasets
-    train_texts = load_dataset_from_file(config.train_file)
-    eval_texts = load_dataset_from_file(config.eval_file)
-    print(f"Loaded {len(train_texts)} train, {len(eval_texts)} eval texts")
-
-    # Create datasets
-    train_dataset = NikudDataset(train_texts, tokenizer, use_cache=config.cache_dataset)
-    eval_dataset = NikudDataset(eval_texts, tokenizer, use_cache=config.cache_dataset)
+    # Load pretokenized datasets
+    train_dataset = load_pretokenized(config.dataset_dir, config.train_split)
+    eval_dataset = load_pretokenized(config.dataset_dir, config.eval_split)
 
     # Initialize model
     print("\nInitializing model...")
@@ -109,9 +106,9 @@ def main():
     # Train (with optional resume)
     resume_checkpoint = None
     if config.resume == "auto":
-        resume_checkpoint = True  # Auto-detect latest checkpoint
+        resume_checkpoint = True
     elif config.resume:
-        resume_checkpoint = config.resume  # Use specified checkpoint
+        resume_checkpoint = config.resume
 
     trainer.train(resume_from_checkpoint=resume_checkpoint)
 
