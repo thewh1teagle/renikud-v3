@@ -11,3 +11,6 @@ __pycache__/
 *.7z
 *.txt
 *.pt
+*.onnx.*
+*.onnx
+*.safetensors

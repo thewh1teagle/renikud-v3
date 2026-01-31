@@ -1,0 +1,227 @@
+{
+  "version": "1.0",
+  "truncation": null,
+  "padding": null,
+  "added_tokens": [
+    {
+      "id": 0,
+      "content": "[PAD]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 1,
+      "content": "[UNK]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 2,
+      "content": "[CLS]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 3,
+      "content": "[SEP]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 4,
+      "content": "[MASK]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    }
+  ],
+  "normalizer": {
+    "type": "Sequence",
+    "normalizers": [
+      {
+        "type": "NFD"
+      }
+    ]
+  },
+  "pre_tokenizer": {
+    "type": "Split",
+    "pattern": {
+      "Regex": "."
+    },
+    "behavior": "Isolated",
+    "invert": false
+  },
+  "post_processor": {
+    "type": "TemplateProcessing",
+    "single": [
+      {
+        "SpecialToken": {
+          "id": "[CLS]",
+          "type_id": 0
+        }
+      },
+      {
+        "Sequence": {
+          "id": "A",
+          "type_id": 0
+        }
+      },
+      {
+        "SpecialToken": {
+          "id": "[SEP]",
+          "type_id": 0
+        }
+      }
+    ],
+    "pair": [
+      {
+        "SpecialToken": {
+          "id": "[CLS]",
+          "type_id": 0
+        }
+      },
+      {
+        "Sequence": {
+          "id": "A",
+          "type_id": 0
+        }
+      },
+      {
+        "SpecialToken": {
+          "id": "[SEP]",
+          "type_id": 0
+        }
+      },
+      {
+        "Sequence": {
+          "id": "B",
+          "type_id": 0
+        }
+      },
+      {
+        "SpecialToken": {
+          "id": "[SEP]",
+          "type_id": 0
+        }
+      }
+    ],
+    "special_tokens": {
+      "[CLS]": {
+        "id": "[CLS]",
+        "ids": [
+          2
+        ],
+        "tokens": [
+          "[CLS]"
+        ]
+      },
+      "[SEP]": {
+        "id": "[SEP]",
+        "ids": [
+          3
+        ],
+        "tokens": [
+          "[SEP]"
+        ]
+      }
+    }
+  },
+  "decoder": {
+    "type": "Fuse"
+  },
+  "model": {
+    "type": "WordLevel",
+    "vocab": {
+      "[PAD]": 0,
+      "[UNK]": 1,
+      "[CLS]": 2,
+      "[SEP]": 3,
+      "[MASK]": 4,
+      " ": 5,
+      "!": 6,
+      "\"": 7,
+      "#": 8,
+      "$": 9,
+      "%": 10,
+      "&": 11,
+      "'": 12,
+      "(": 13,
+      ")": 14,
+      "*": 15,
+      "+": 16,
+      ",": 17,
+      "-": 18,
+      ".": 19,
+      "/": 20,
+      "0": 21,
+      "1": 22,
+      "2": 23,
+      "3": 24,
+      "4": 25,
+      "5": 26,
+      "6": 27,
+      "7": 28,
+      "8": 29,
+      "9": 30,
+      ":": 31,
+      ";": 32,
+      "<": 33,
+      "=": 34,
+      ">": 35,
+      "?": 36,
+      "@": 37,
+      "[": 38,
+      "\\": 39,
+      "]": 40,
+      "^": 41,
+      "_": 42,
+      "`": 43,
+      "{": 44,
+      "|": 45,
+      "}": 46,
+      "~": 47,
+      "א": 48,
+      "ב": 49,
+      "ג": 50,
+      "ד": 51,
+      "ה": 52,
+      "ו": 53,
+      "ז": 54,
+      "ח": 55,
+      "ט": 56,
+      "י": 57,
+      "ך": 58,
+      "כ": 59,
+      "ל": 60,
+      "ם": 61,
+      "מ": 62,
+      "ן": 63,
+      "נ": 64,
+      "ס": 65,
+      "ע": 66,
+      "ף": 67,
+      "פ": 68,
+      "ץ": 69,
+      "צ": 70,
+      "ק": 71,
+      "ר": 72,
+      "ש": 73,
+      "ת": 74
+    },
+    "unk_token": "[UNK]"
+  }
+}

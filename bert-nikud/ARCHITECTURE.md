@@ -13,6 +13,9 @@ This model automatically adds nikud (vowel marks and diacritics) to Hebrew text.
 ### Base Model
 The model is built on **DictaBERT Large** (`dicta-il/dictabert-large-char`), a character-level BERT model pre-trained on Hebrew text. Character-level tokenization is crucial for Hebrew nikud prediction since we need to predict marks for individual characters.
 
+### Tokenizer
+We use the character-level tokenizer from `dicta-il/dictabert-large-char-menaked` (the fine-tuned nikud model) rather than the base model's tokenizer. Both are character-level (one token per character), but the menaked tokenizer has a larger vocabulary (841 tokens) that includes nikud-related characters, ensuring no Hebrew characters map to `[UNK]`. The base model weights are still loaded from `dictabert-large-char` — only the tokenizer is taken from the menaked variant.
+
 ### Classification Heads
 
 The model uses a hybrid approach with **5 separate classification heads**:

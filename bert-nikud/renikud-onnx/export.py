@@ -83,10 +83,6 @@ def export_to_onnx(checkpoint_path: str, output_path: str):
             weight_type=QuantType.QInt8,
         )
 
-        # Compare file sizes
-        original_size = Path(output_path).stat().st_size
-        int8_size = int8_path.stat().st_size
-
         print(f"✓ Int8 model exported successfully to: {int8_path}")
     except Exception as e:
         print(f"⚠ Int8 quantization failed: {e}")

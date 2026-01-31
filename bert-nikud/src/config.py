@@ -18,14 +18,14 @@ def get_args():
     parser.add_argument(
         "--train-file",
         type=str,
-        default="data/train.txt",
+        default="dataset/train.txt",
         help="Path to training data file",
     )
     parser.add_argument(
-        "--eval-max-lines",
-        type=int,
-        default=100,
-        help="Maximum number of lines to use for evaluation",
+        "--eval-file",
+        type=str,
+        default="dataset/val.txt",
+        help="Path to evaluation data file",
     )
     parser.add_argument(
         "--seed", type=int, default=42, help="Random seed for reproducibility"
@@ -43,6 +43,18 @@ def get_args():
     )
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
     parser.add_argument(
+        "--weight-decay",
+        type=float,
+        default=0.01,
+        help="Weight decay for AdamW",
+    )
+    parser.add_argument(
+        "--warmup-ratio",
+        type=float,
+        default=0.05,
+        help="Ratio of total steps for linear warmup",
+    )
+    parser.add_argument(
         "--max-epochs", type=int, default=10, help="Maximum number of training epochs"
     )
     parser.add_argument(
@@ -58,6 +70,12 @@ def get_args():
         type=str,
         default="dicta-il/dictabert-large-char",
         help="Pretrained model name",
+    )
+    parser.add_argument(
+        "--tokenizer-path",
+        type=str,
+        default="tokenizer/dictabert-large-char-menaked",
+        help="Tokenizer path or name",
     )
     parser.add_argument("--dropout", type=float, default=0.1, help="Dropout rate")
 
@@ -106,20 +124,7 @@ def get_args():
 
     args = parser.parse_args()
 
-    # Normalize arg names (replace - with _)
-    args.train_file = args.train_file
-    args.eval_max_lines = args.eval_max_lines
+    # Alias for convenience
     args.learning_rate = args.lr
-    args.max_epochs = args.max_epochs
-    args.max_grad_norm = args.max_grad_norm
-    args.model_name = args.model_name
-    args.batch_size = args.batch_size
-    args.checkpoint_dir = args.checkpoint_dir
-    args.save_best = args.save_best
-    args.resume = args.resume
-    args.cache_dataset = args.cache_dataset
-    args.wandb_mode = args.wandb_mode
-    args.wandb_project = args.wandb_project
-    args.wandb_run_name = args.wandb_run_name
 
     return args

@@ -26,9 +26,10 @@ class NikudTrainer(Trainer):
         stress_labels = inputs.pop("stress_labels")
         prefix_labels = inputs.pop("prefix_labels")
 
-        # Remove non-tensor fields
+        # Remove non-model fields
         inputs.pop("plain_text", None)
         inputs.pop("original_text", None)
+        inputs.pop("offset_mapping", None)
 
         outputs = model(
             **inputs,
@@ -61,8 +62,9 @@ class NikudTrainer(Trainer):
         )
 
         # Calculate WER/CER
-        model = self.model
+        model = self.accelerator.unwrap_model(self.model)
         model.eval()
+        device = self.accelerator.device
 
         total_wer = 0.0
         total_cer = 0.0
@@ -70,16 +72,32 @@ class NikudTrainer(Trainer):
 
         with torch.no_grad():
             for batch in dataloader:
-                input_ids = batch["input_ids"].to(self.args.device)
-                attention_mask = batch["attention_mask"].to(self.args.device)
+                input_ids = batch["input_ids"].to(device)
+                attention_mask = batch["attention_mask"].to(device)
 
                 # Get predictions
                 predictions = model.predict(input_ids, attention_mask)
 
                 # Calculate WER/CER for each sample
+                # Get offset mappings for this batch
+                offset_mappings = batch.get("offset_mapping")
+
                 for i in range(input_ids.shape[0]):
+                    # Re-tokenize to get offset_mapping if not in batch
+                    if offset_mappings is not None:
+                        offset_mapping = offset_mappings[i]
+                    else:
+                        enc = self.processing_class(
+                            batch["plain_text"][i],
+                            return_tensors="pt",
+                            return_offsets_mapping=True,
+                            add_special_tokens=True,
+                        )
+                        offset_mapping = enc["offset_mapping"][0]
+
                     predicted_text = reconstruct_text_from_predictions(
                         input_ids[i],
+                        offset_mapping,
                         predictions["vowel"][i],
                         predictions["dagesh"][i],
                         predictions["sin"][i],

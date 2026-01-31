@@ -56,7 +56,7 @@ DEDUPLICATE_MAP = {
     "\u05bf": "",  # Rafe -> nothing
     # Row 4
     "\u05c0": "",  # Paseq -> nothing
-    "\u05c1": "",  # Shin dot -> nothing
+    "\u05c1": "",  # Shin dot -> nothing (shin is unmarked default, sin dot marks the exception)
     "\u05c2": "\u05c2",  # Sin -> Sin (s)
     "\u05c3": "",  # Sof pasuq -> nothing
     "\u05c4": "",  # Upper dot -> nothing
@@ -125,8 +125,8 @@ DEDUPLICATE_MAP = {
 }
 
 
+_TRANSLATE_TABLE = str.maketrans(DEDUPLICATE_MAP)
+
+
 def deduplicate(text: str) -> str:
-    for char in text:
-        if char in DEDUPLICATE_MAP:
-            text = text.replace(char, DEDUPLICATE_MAP[char])
-    return text
+    return text.translate(_TRANSLATE_TABLE)

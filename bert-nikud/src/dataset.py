@@ -41,6 +41,33 @@ VOWEL_TO_ID = {
 ID_TO_VOWEL = {v: k for k, v in VOWEL_TO_ID.items()}
 
 
+def tokenize_with_offsets(text: str, tokenizer) -> dict:
+    """
+    Tokenize text with offset mapping to avoid UNK tokens.
+
+    Args:
+        text: Plain text to tokenize
+        tokenizer: HuggingFace tokenizer
+
+    Returns:
+        Dictionary with input_ids, attention_mask, and offset_mapping
+    """
+    encoding = tokenizer(
+        text,
+        return_tensors="pt",
+        padding=False,
+        truncation=False,
+        add_special_tokens=True,
+        return_offsets_mapping=True,
+    )
+
+    return {
+        "input_ids": encoding["input_ids"][0],
+        "attention_mask": encoding["attention_mask"][0],
+        "offset_mapping": encoding["offset_mapping"][0],
+    }
+
+
 def _load_or_process_dataset(
     texts: List[str], tokenizer, cache_dir: str, use_cache: bool
 ) -> List[dict]:
@@ -97,20 +124,12 @@ def prepare_training_data(nikud_text: str, tokenizer) -> dict:
     """
     plain_text, labels = extract_nikud_labels(nikud_text)
 
-    # Tokenize the plain text character-by-character
-    # DictaBERT tokenizer works on single characters, but multi-character strings produce UNK
-    token_ids = [tokenizer.cls_token_id]
-    for char in plain_text:
-        ids = tokenizer(char, add_special_tokens=False)["input_ids"]
-        token_ids.extend(ids)
-    token_ids.append(tokenizer.sep_token_id)
-
-    # Create attention mask (all 1s for actual tokens)
-    attention_mask = [1] * len(token_ids)
-
-    input_ids = torch.tensor(token_ids, dtype=torch.long)
-    attention_mask = torch.tensor(attention_mask, dtype=torch.long)
-    num_tokens = len(token_ids)
+    # Tokenize the plain text with offset mapping to avoid UNK tokens
+    encoding = tokenize_with_offsets(plain_text, tokenizer)
+    input_ids = encoding["input_ids"]
+    attention_mask = encoding["attention_mask"]
+    offset_mapping = encoding["offset_mapping"]
+    num_tokens = len(input_ids)
 
     # Create label tensors
     # Labels for special tokens should be -100 (ignored in loss)
@@ -139,6 +158,7 @@ def prepare_training_data(nikud_text: str, tokenizer) -> dict:
         "sin_labels": sin_labels,
         "stress_labels": stress_labels,
         "prefix_labels": prefix_labels,
+        "offset_mapping": offset_mapping,  # Save for reconstruction
         "plain_text": plain_text,
         "original_text": nikud_text,  # Already in NFD format
     }
@@ -243,6 +263,7 @@ def collate_fn(batch: List[dict]) -> dict:
     stress_labels = torch.full((batch_size, max_len), -100, dtype=torch.long)
     prefix_labels = torch.full((batch_size, max_len), -100, dtype=torch.long)
 
+    offset_mapping = torch.zeros(batch_size, max_len, 2, dtype=torch.long)
     plain_texts = []
     original_texts = []
 
@@ -257,6 +278,7 @@ def collate_fn(batch: List[dict]) -> dict:
         sin_labels[i, :seq_len] = item["sin_labels"]
         stress_labels[i, :seq_len] = item["stress_labels"]
         prefix_labels[i, :seq_len] = item["prefix_labels"]
+        offset_mapping[i, :seq_len] = item["offset_mapping"]
 
         plain_texts.append(item["plain_text"])
         original_texts.append(item["original_text"])
@@ -269,6 +291,7 @@ def collate_fn(batch: List[dict]) -> dict:
         "sin_labels": sin_labels,
         "stress_labels": stress_labels,
         "prefix_labels": prefix_labels,
+        "offset_mapping": offset_mapping,
         "plain_text": plain_texts,
         "original_text": original_texts,
     }

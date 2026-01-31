@@ -40,7 +40,7 @@ class Renikud:
             Text with predicted nikud marks
         """
         # Remove diacritics from the text
-        text = re.sub(r"[\u0590-\u05CF]", "", text)
+        text = re.sub(r"[\u0590-\u05CF|]", "", text)
 
         # Tokenize
         encoding = self.tokenizer.encode(text)

@@ -3,8 +3,8 @@ Training script for Hebrew Nikud BERT model with HuggingFace Trainer.
 
 Train the model on Hebrew text with nikud:
     uv run python src/train.py \
-        --train-file data/train_1m.txt \
-        --eval-max-lines 200 \
+        --train-file dataset/train.txt \
+        --eval-file dataset/val.txt \
         --batch-size 16 \
         --max-epochs 999999 \
         --lr 1e-4 \
@@ -14,17 +14,18 @@ Train the model on Hebrew text with nikud:
         --wandb-run-name run_1m
 
 Resume training from checkpoint:
-    uv run python src/train.py --train-file data/train_100k.txt --resume checkpoints/run_100k/checkpoint-6000
+    uv run python src/train.py --resume checkpoints/run_1m/checkpoint-6000
 """
 
 import torch
-from transformers import AutoTokenizer, TrainingArguments
+from transformers import TrainingArguments
 from pathlib import Path
 
 from model import HebrewNikudModel, count_parameters
-from dataset import NikudDataset, load_dataset_from_file, split_dataset, collate_fn
+from dataset import NikudDataset, load_dataset_from_file, collate_fn
 from trainer import NikudTrainer
 from config import get_args
+from tokenizer_utils import load_tokenizer
 
 
 def main():
@@ -43,14 +44,12 @@ def main():
 
     # Load tokenizer
     print("\nLoading tokenizer and data...")
-    tokenizer = AutoTokenizer.from_pretrained(config.model_name)
+    tokenizer = load_tokenizer(config.tokenizer_path)
 
-    # Load and split dataset
-    texts = load_dataset_from_file(config.train_file)
-    train_texts, eval_texts = split_dataset(texts, config.eval_max_lines, config.seed)
-    print(
-        f"Loaded {len(texts)} texts ({len(train_texts)} train, {len(eval_texts)} eval)"
-    )
+    # Load pre-split datasets
+    train_texts = load_dataset_from_file(config.train_file)
+    eval_texts = load_dataset_from_file(config.eval_file)
+    print(f"Loaded {len(train_texts)} train, {len(eval_texts)} eval texts")
 
     # Create datasets
     train_dataset = NikudDataset(train_texts, tokenizer, use_cache=config.cache_dataset)
@@ -74,6 +73,9 @@ def main():
         per_device_train_batch_size=config.batch_size,
         per_device_eval_batch_size=config.batch_size,
         learning_rate=config.learning_rate,
+        weight_decay=config.weight_decay,
+        warmup_ratio=config.warmup_ratio,
+        lr_scheduler_type="cosine",
         max_grad_norm=config.max_grad_norm,
         eval_strategy="steps",
         eval_steps=1000,

@@ -7,6 +7,7 @@ import torch
 
 def reconstruct_text_from_predictions(
     input_ids: torch.Tensor,
+    offset_mapping: torch.Tensor,
     vowel_preds: torch.Tensor,
     dagesh_preds: torch.Tensor,
     sin_preds: torch.Tensor,
@@ -19,6 +20,7 @@ def reconstruct_text_from_predictions(
 
     Args:
         input_ids: Token IDs [seq_len]
+        offset_mapping: Offset mapping for each token [seq_len, 2] (char_start, char_end)
         vowel_preds: Vowel class predictions [seq_len] (0-7)
         dagesh_preds: Dagesh binary predictions [seq_len] (0/1)
         sin_preds: Sin binary predictions [seq_len] (0/1)
@@ -49,15 +51,20 @@ def reconstruct_text_from_predictions(
     sep_token_id = tokenizer.sep_token_id
     pad_token_id = tokenizer.pad_token_id
 
-    # Skip [CLS] (position 0) and stop at [SEP] or [PAD]
+    # Use offset_mapping to properly map predictions to characters
+    # offset_mapping has shape [seq_len, 2] where each entry is (char_start, char_end)
     for i in range(1, len(input_ids)):
-        token_id = input_ids[i].item()
-
         # Stop at special tokens
-        if token_id == sep_token_id or token_id == pad_token_id:
+        if input_ids[i].item() == sep_token_id or input_ids[i].item() == pad_token_id:
             break
 
-        char = tokenizer.decode([token_id])
+        # Get character range using offset_mapping
+        char_start, char_end = offset_mapping[i].tolist()
+        char_start = int(char_start)
+        char_end = int(char_end)
+
+        # Get the character from input_ids
+        char = tokenizer.decode([input_ids[i].item()])
         result.append(char)
 
         # Only add nikud marks for Hebrew letters
@@ -72,7 +79,7 @@ def reconstruct_text_from_predictions(
 
         # Add vowel (if not VOWEL_NONE)
         vowel_id = vowel_preds[i].item()
-        if vowel_id > 0:  # 0 is VOWEL_NONE
+        if vowel_id > 0:
             vowel_char = ID_TO_VOWEL.get(vowel_id)
             if vowel_char:
                 diacritics.append(vowel_char)
@@ -91,6 +98,7 @@ def reconstruct_text_from_predictions(
 
         # Sort diacritics for canonical order
         diacritics.sort()
+
         result.extend(diacritics)
 
         # Add prefix separator if predicted

@@ -8,8 +8,9 @@ This module defines a custom BERT model for predicting Hebrew nikud marks:
 
 import torch
 import torch.nn as nn
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModel
 from typing import Optional, Tuple, Dict
+from tokenizer_utils import load_tokenizer
 
 
 class HebrewNikudModel(nn.Module):
@@ -229,20 +230,23 @@ class HebrewNikudModel(nn.Module):
 
 
 def load_model(
-    checkpoint_path: str, device: str = "cpu"
+    checkpoint_path: str,
+    tokenizer_path: str = "tokenizer/dictabert-large-char-menaked",
+    device: str = "cpu",
 ) -> Tuple[HebrewNikudModel, object]:
     """
     Load a trained model from checkpoint.
 
     Args:
         checkpoint_path: Path to model checkpoint
+        tokenizer_path: Tokenizer path or name
         device: Device to load model on
 
     Returns:
         Tuple of (model, tokenizer)
     """
     # Load tokenizer
-    tokenizer = AutoTokenizer.from_pretrained("dicta-il/dictabert-large-char")
+    tokenizer = load_tokenizer(tokenizer_path)
 
     # Load model
     model = HebrewNikudModel()

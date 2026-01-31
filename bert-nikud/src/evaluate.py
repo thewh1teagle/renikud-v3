@@ -147,10 +147,26 @@ def evaluate(
             )
             prefix_total += prefix_mask.sum().item()
 
+            # Get offset mappings for this batch
+            offset_mappings = batch.get("offset_mapping")
+
             # Calculate WER/CER for each sample in batch
             for i in range(input_ids.shape[0]):
+                # Re-tokenize to get offset_mapping if not in batch
+                if offset_mappings is not None:
+                    offset_mapping = offset_mappings[i]
+                else:
+                    enc = tokenizer(
+                        batch["plain_text"][i],
+                        return_tensors="pt",
+                        return_offsets_mapping=True,
+                        add_special_tokens=True,
+                    )
+                    offset_mapping = enc["offset_mapping"][0]
+
                 predicted_text = reconstruct_text_from_predictions(
                     input_ids[i],
+                    offset_mapping,
                     vowel_preds[i],
                     dagesh_preds[i],
                     sin_preds[i],
