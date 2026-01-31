@@ -19,12 +19,12 @@ def extract_nikud_labels(nikud_text: str) -> Tuple[str, List[Dict[str, int]]]:
     Returns:
         Tuple of (plain_text, labels) where:
         - plain_text: Hebrew text without nikud marks
-        - labels: List of dicts with keys 'vowel' (0-5), 'dagesh', 'sin', 'stress' (0/1)
+        - labels: List of dicts with keys 'vowel' (0-7), 'dagesh', 'sin', 'stress', 'prefix' (0/1)
     """
     # Import here to avoid circular dependencies
     from normalize import normalize
     from constants import (
-        LETTERS, DAGESH, S_SIN, STRESS_HATAMA,
+        LETTERS, DAGESH, S_SIN, STRESS_HATAMA, PREFIX_SEP,
         CAN_HAVE_DAGESH, CAN_HAVE_SIN
     )
     from dataset import VOWEL_TO_ID, VOWEL_NONE
@@ -42,6 +42,11 @@ def extract_nikud_labels(nikud_text: str) -> Tuple[str, List[Dict[str, int]]]:
     while i < len(nikud_text):
         char = nikud_text[i]
         
+        # Skip prefix separator (handled by previous letter's prefix label)
+        if char == PREFIX_SEP:
+            i += 1
+            continue
+
         # Handle non-Hebrew letters (spaces, punctuation, etc.)
         if char not in LETTERS:
             plain_chars.append(char)
@@ -50,7 +55,8 @@ def extract_nikud_labels(nikud_text: str) -> Tuple[str, List[Dict[str, int]]]:
                 'vowel': -100,
                 'dagesh': -100,
                 'sin': -100,
-                'stress': -100
+                'stress': -100,
+                'prefix': -100
             })
             i += 1
             continue
@@ -62,7 +68,8 @@ def extract_nikud_labels(nikud_text: str) -> Tuple[str, List[Dict[str, int]]]:
             'vowel': VOWEL_NONE,  # No vowel by default
             'dagesh': 0,          # No dagesh by default
             'sin': 0,             # No sin by default
-            'stress': 0           # No stress by default
+            'stress': 0,          # No stress by default
+            'prefix': 0           # No prefix boundary by default
         }
         
         # Look ahead for diacritics
@@ -85,6 +92,10 @@ def extract_nikud_labels(nikud_text: str) -> Tuple[str, List[Dict[str, int]]]:
                 
             j += 1
         
+        # Check if prefix separator follows this letter's diacritics
+        if j < len(nikud_text) and nikud_text[j] == PREFIX_SEP:
+            label['prefix'] = 1
+
         labels.append(label)
         i = j
     

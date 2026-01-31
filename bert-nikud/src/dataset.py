@@ -3,7 +3,7 @@ Dataset preparation for Hebrew nikud prediction.
 
 This module handles:
 - Creating input/label pairs for training
-- Hybrid encoding: vowels as multi-class (0-5), others as binary
+- Hybrid encoding: vowels as multi-class (0-7), others as binary
 """
 
 from typing import List
@@ -14,7 +14,7 @@ import pickle
 import os
 from pathlib import Path
 from encode import extract_nikud_labels
-from constants import A_PATAH, E_TSERE, I_HIRIK, O_HOLAM, U_QUBUT
+from constants import A_PATAH, E_TSERE, I_HIRIK, O_HOLAM, U_QUBUT, SHVA, E_VOCAL_SHVA
 
 
 # Vowel encoding (multi-class)
@@ -24,6 +24,8 @@ VOWEL_TSERE = 2
 VOWEL_HIRIK = 3
 VOWEL_HOLAM = 4
 VOWEL_QUBUT = 5
+VOWEL_SHVA = 6
+VOWEL_VOCAL_SHVA = 7
 
 VOWEL_TO_ID = {
     None: VOWEL_NONE,
@@ -32,6 +34,8 @@ VOWEL_TO_ID = {
     I_HIRIK: VOWEL_HIRIK,
     O_HOLAM: VOWEL_HOLAM,
     U_QUBUT: VOWEL_QUBUT,
+    SHVA: VOWEL_SHVA,
+    E_VOCAL_SHVA: VOWEL_VOCAL_SHVA,
 }
 
 ID_TO_VOWEL = {v: k for k, v in VOWEL_TO_ID.items()}
@@ -110,7 +114,8 @@ def prepare_training_data(nikud_text: str, tokenizer) -> dict:
     dagesh_labels = torch.full((num_tokens,), -100, dtype=torch.long)
     sin_labels = torch.full((num_tokens,), -100, dtype=torch.long)
     stress_labels = torch.full((num_tokens,), -100, dtype=torch.long)
-    
+    prefix_labels = torch.full((num_tokens,), -100, dtype=torch.long)
+
     # Fill in labels for actual characters (skip [CLS] at position 0)
     # Assuming character-level tokenization: token i corresponds to character i-1
     for i, label in enumerate(labels):
@@ -120,7 +125,8 @@ def prepare_training_data(nikud_text: str, tokenizer) -> dict:
             dagesh_labels[token_idx] = label['dagesh']
             sin_labels[token_idx] = label['sin']
             stress_labels[token_idx] = label['stress']
-    
+            prefix_labels[token_idx] = label['prefix']
+
     return {
         'input_ids': encoding['input_ids'][0],
         'attention_mask': encoding['attention_mask'][0],
@@ -128,6 +134,7 @@ def prepare_training_data(nikud_text: str, tokenizer) -> dict:
         'dagesh_labels': dagesh_labels,
         'sin_labels': sin_labels,
         'stress_labels': stress_labels,
+        'prefix_labels': prefix_labels,
         'plain_text': plain_text,
         'original_text': nikud_text,  # Already in NFD format
     }
@@ -224,24 +231,26 @@ def collate_fn(batch: List[dict]) -> dict:
     dagesh_labels = torch.full((batch_size, max_len), -100, dtype=torch.long)
     sin_labels = torch.full((batch_size, max_len), -100, dtype=torch.long)
     stress_labels = torch.full((batch_size, max_len), -100, dtype=torch.long)
-    
+    prefix_labels = torch.full((batch_size, max_len), -100, dtype=torch.long)
+
     plain_texts = []
     original_texts = []
-    
+
     # Fill in the batch
     for i, item in enumerate(batch):
         seq_len = item['input_ids'].shape[0]
-        
+
         input_ids[i, :seq_len] = item['input_ids']
         attention_mask[i, :seq_len] = item['attention_mask']
         vowel_labels[i, :seq_len] = item['vowel_labels']
         dagesh_labels[i, :seq_len] = item['dagesh_labels']
         sin_labels[i, :seq_len] = item['sin_labels']
         stress_labels[i, :seq_len] = item['stress_labels']
-        
+        prefix_labels[i, :seq_len] = item['prefix_labels']
+
         plain_texts.append(item['plain_text'])
         original_texts.append(item['original_text'])
-    
+
     return {
         'input_ids': input_ids,
         'attention_mask': attention_mask,
@@ -249,6 +258,7 @@ def collate_fn(batch: List[dict]) -> dict:
         'dagesh_labels': dagesh_labels,
         'sin_labels': sin_labels,
         'stress_labels': stress_labels,
+        'prefix_labels': prefix_labels,
         'plain_text': plain_texts,
         'original_text': original_texts,
     }

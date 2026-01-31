@@ -62,6 +62,7 @@ def evaluate(
     total_dagesh_loss = 0.0
     total_sin_loss = 0.0
     total_stress_loss = 0.0
+    total_prefix_loss = 0.0
     
     # Accuracy tracking
     vowel_correct = 0
@@ -72,6 +73,8 @@ def evaluate(
     sin_total = 0
     stress_correct = 0
     stress_total = 0
+    prefix_correct = 0
+    prefix_total = 0
     
     # WER/CER tracking
     total_wer = 0.0
@@ -90,7 +93,8 @@ def evaluate(
             dagesh_labels = batch['dagesh_labels'].to(device)
             sin_labels = batch['sin_labels'].to(device)
             stress_labels = batch['stress_labels'].to(device)
-            
+            prefix_labels = batch['prefix_labels'].to(device)
+
             # Forward pass
             outputs = model(
                 input_ids=input_ids,
@@ -99,6 +103,7 @@ def evaluate(
                 dagesh_labels=dagesh_labels,
                 sin_labels=sin_labels,
                 stress_labels=stress_labels,
+                prefix_labels=prefix_labels,
             )
             
             # Accumulate losses
@@ -107,12 +112,14 @@ def evaluate(
             total_dagesh_loss += outputs['dagesh_loss'].item()
             total_sin_loss += outputs['sin_loss'].item()
             total_stress_loss += outputs['stress_loss'].item()
+            total_prefix_loss += outputs['prefix_loss'].item()
             
             # Get predictions
             vowel_preds = torch.argmax(outputs['vowel_logits'], dim=-1)
             dagesh_preds = (torch.sigmoid(outputs['dagesh_logits']) > 0.5).long()
             sin_preds = (torch.sigmoid(outputs['sin_logits']) > 0.5).long()
             stress_preds = (torch.sigmoid(outputs['stress_logits']) > 0.5).long()
+            prefix_preds = (torch.sigmoid(outputs['prefix_logits']) > 0.5).long()
             
             # Calculate accuracies (only on non-ignored positions)
             vowel_mask = vowel_labels != -100
@@ -130,6 +137,10 @@ def evaluate(
             stress_mask = stress_labels != -100
             stress_correct += (stress_preds[stress_mask] == stress_labels[stress_mask]).sum().item()
             stress_total += stress_mask.sum().item()
+
+            prefix_mask = prefix_labels != -100
+            prefix_correct += (prefix_preds[prefix_mask] == prefix_labels[prefix_mask]).sum().item()
+            prefix_total += prefix_mask.sum().item()
             
             # Calculate WER/CER for each sample in batch
             for i in range(input_ids.shape[0]):
@@ -139,6 +150,7 @@ def evaluate(
                     dagesh_preds[i],
                     sin_preds[i],
                     stress_preds[i],
+                    prefix_preds[i],
                     tokenizer
                 )
                 
@@ -170,10 +182,12 @@ def evaluate(
             'dagesh_loss': 0.0,
             'sin_loss': 0.0,
             'stress_loss': 0.0,
+            'prefix_loss': 0.0,
             'vowel_acc': 0.0,
             'dagesh_acc': 0.0,
             'sin_acc': 0.0,
             'stress_acc': 0.0,
+            'prefix_acc': 0.0,
             'wer': 0.0,
             'cer': 0.0,
         }
@@ -183,11 +197,13 @@ def evaluate(
     avg_dagesh_loss = total_dagesh_loss / num_batches
     avg_sin_loss = total_sin_loss / num_batches
     avg_stress_loss = total_stress_loss / num_batches
-    
+    avg_prefix_loss = total_prefix_loss / num_batches
+
     vowel_acc = vowel_correct / vowel_total if vowel_total > 0 else 0.0
     dagesh_acc = dagesh_correct / dagesh_total if dagesh_total > 0 else 0.0
     sin_acc = sin_correct / sin_total if sin_total > 0 else 0.0
     stress_acc = stress_correct / stress_total if stress_total > 0 else 0.0
+    prefix_acc = prefix_correct / prefix_total if prefix_total > 0 else 0.0
     
     avg_wer = total_wer / num_samples if num_samples > 0 else 0.0
     avg_cer = total_cer / num_samples if num_samples > 0 else 0.0
@@ -198,10 +214,12 @@ def evaluate(
         'dagesh_loss': avg_dagesh_loss,
         'sin_loss': avg_sin_loss,
         'stress_loss': avg_stress_loss,
+        'prefix_loss': avg_prefix_loss,
         'vowel_acc': vowel_acc,
         'dagesh_acc': dagesh_acc,
         'sin_acc': sin_acc,
         'stress_acc': stress_acc,
+        'prefix_acc': prefix_acc,
         'wer': avg_wer,
         'cer': avg_cer,
     }

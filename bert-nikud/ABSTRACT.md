@@ -6,11 +6,17 @@ Traditional Hebrew nikud includes marks no longer needed in modern Hebrew, while
 
 ## Nikud Marks in Use
 
-This system uses only **6 marks**:
+This system uses only **8 marks**:
 
 - **5 Vowels**: פתַח (a), צֵירה (e), חִיריק (i), חוֹלם (o), קובוץ (u)
+- **Shva**: שְׁוָא (ְ) - silent
+- **Vocal Shva**: שְׁוָא קוֹלִי (ֽ) - sounds like e
 - **Dagesh**: דגּש
 - **Stress**: הטעמ֫ה (֫)
+
+### Why Shva and Vocal Shva?
+
+Readers are accustomed to seeing shva in nikud text. Replacing all shva with nothing (silent) or tsere (vocal) would look unfamiliar and confusing. Keeping shva for silent positions and introducing vocal shva for "e"-sounding positions preserves readability while still simplifying the traditional system.
 
 ## Vowel Representations
 
@@ -21,6 +27,8 @@ This system uses only **6 marks**:
 | **i** | אִ, אִי | i |
 | **o** | אֹ, אוֹ | o |
 | **u** | אֻ, אוּ | u |
+| **shva** | אְ | silent |
+| **vocal shva** | אֽ | e |
 
 ## Special Characters
 

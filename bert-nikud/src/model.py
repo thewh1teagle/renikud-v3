@@ -2,8 +2,8 @@
 Hebrew Nikud BERT Model with hybrid classification heads.
 
 This module defines a custom BERT model for predicting Hebrew nikud marks:
-- Vowel prediction: 1 multi-class head with 6 classes (none + 5 vowels) - mutually exclusive
-- Other marks: 3 binary heads (dagesh, sin, stress) - independent
+- Vowel prediction: 1 multi-class head with 8 classes (none + 5 vowels + shva + vocal shva) - mutually exclusive
+- Other marks: 4 binary heads (dagesh, sin, stress, prefix) - independent
 """
 
 import torch
@@ -17,10 +17,11 @@ class HebrewNikudModel(nn.Module):
     BERT-based model for Hebrew nikud prediction with hybrid classification.
     
     Architecture:
-    - Vowel classifier: 6 classes (none, patah, tsere, hirik, holam, qubut) - uses CrossEntropy
+    - Vowel classifier: 8 classes (none, patah, tsere, hirik, holam, qubut, shva, vocal shva) - uses CrossEntropy
     - Dagesh classifier: binary - uses BCE
     - Sin classifier: binary - uses BCE
     - Stress classifier: binary - uses BCE
+    - Prefix classifier: binary - uses BCE
     """
     
     def __init__(self, model_name: str = 'dicta-il/dictabert-large-char', dropout: float = 0.1):
@@ -39,10 +40,11 @@ class HebrewNikudModel(nn.Module):
         self.dropout = nn.Dropout(dropout)
         
         # Classification heads
-        self.vowel_classifier = nn.Linear(self.hidden_size, 6)  # 6 classes: none + 5 vowels
+        self.vowel_classifier = nn.Linear(self.hidden_size, 8)  # 8 classes: none + 5 vowels + shva + vocal shva
         self.dagesh_classifier = nn.Linear(self.hidden_size, 1)  # binary (sigmoid output)
         self.sin_classifier = nn.Linear(self.hidden_size, 1)     # binary (sigmoid output)
         self.stress_classifier = nn.Linear(self.hidden_size, 1)  # binary (sigmoid output)
+        self.prefix_classifier = nn.Linear(self.hidden_size, 1)  # binary (sigmoid output)
         
         # Loss functions
         # Using label smoothing to prevent overconfidence and help with class imbalance
@@ -57,6 +59,7 @@ class HebrewNikudModel(nn.Module):
         dagesh_labels: Optional[torch.Tensor] = None,
         sin_labels: Optional[torch.Tensor] = None,
         stress_labels: Optional[torch.Tensor] = None,
+        prefix_labels: Optional[torch.Tensor] = None,
     ) -> Dict[str, torch.Tensor]:
         """
         Forward pass through the model.
@@ -64,10 +67,11 @@ class HebrewNikudModel(nn.Module):
         Args:
             input_ids: Token IDs [batch_size, seq_len]
             attention_mask: Attention mask [batch_size, seq_len]
-            vowel_labels: Vowel class labels [batch_size, seq_len] (0-5, -100 for ignore)
+            vowel_labels: Vowel class labels [batch_size, seq_len] (0-7, -100 for ignore)
             dagesh_labels: Dagesh binary labels [batch_size, seq_len] (0/1, -100 for ignore)
             sin_labels: Sin binary labels [batch_size, seq_len] (0/1, -100 for ignore)
             stress_labels: Stress binary labels [batch_size, seq_len] (0/1, -100 for ignore)
+            prefix_labels: Prefix binary labels [batch_size, seq_len] (0/1, -100 for ignore)
             
         Returns:
             Dictionary with logits and optionally loss
@@ -80,23 +84,25 @@ class HebrewNikudModel(nn.Module):
         sequence_output = self.dropout(sequence_output)
         
         # Get predictions from each head
-        vowel_logits = self.vowel_classifier(sequence_output)  # [batch_size, seq_len, 6]
+        vowel_logits = self.vowel_classifier(sequence_output)  # [batch_size, seq_len, 8]
         dagesh_logits = self.dagesh_classifier(sequence_output).squeeze(-1)  # [batch_size, seq_len]
         sin_logits = self.sin_classifier(sequence_output).squeeze(-1)  # [batch_size, seq_len]
         stress_logits = self.stress_classifier(sequence_output).squeeze(-1)  # [batch_size, seq_len]
-        
+        prefix_logits = self.prefix_classifier(sequence_output).squeeze(-1)  # [batch_size, seq_len]
+
         result = {
             'vowel_logits': vowel_logits,
             'dagesh_logits': dagesh_logits,
             'sin_logits': sin_logits,
             'stress_logits': stress_logits,
+            'prefix_logits': prefix_logits,
         }
         
         # Calculate losses if labels are provided
         if vowel_labels is not None:
             # Vowel loss (multi-class)
             vowel_loss = self.vowel_loss_fn(
-                vowel_logits.view(-1, 6),
+                vowel_logits.view(-1, 8),
                 vowel_labels.view(-1)
             )
             
@@ -124,16 +130,23 @@ class HebrewNikudModel(nn.Module):
             
             stress_loss_unreduced = self.binary_loss_fn(stress_logits, stress_labels_masked)
             stress_loss = (stress_loss_unreduced * stress_mask).sum() / (stress_mask.sum() + 1e-8)
-            
+
+            prefix_mask = (prefix_labels != -100).float()
+            prefix_labels_masked = prefix_labels.clone().float()
+            prefix_labels_masked[prefix_labels == -100] = 0.0
+            prefix_loss_unreduced = self.binary_loss_fn(prefix_logits, prefix_labels_masked)
+            prefix_loss = (prefix_loss_unreduced * prefix_mask).sum() / (prefix_mask.sum() + 1e-8)
+
             # Combined loss
-            total_loss = vowel_loss + dagesh_loss + sin_loss + stress_loss
-            
+            total_loss = vowel_loss + dagesh_loss + sin_loss + stress_loss + prefix_loss
+
             result.update({
                 'loss': total_loss,
                 'vowel_loss': vowel_loss,
                 'dagesh_loss': dagesh_loss,
                 'sin_loss': sin_loss,
                 'stress_loss': stress_loss,
+                'prefix_loss': prefix_loss,
             })
         
         return result
@@ -152,28 +165,31 @@ class HebrewNikudModel(nn.Module):
             
         Returns:
             Dictionary with predictions:
-            - vowel: class predictions [batch_size, seq_len] (0-5)
+            - vowel: class predictions [batch_size, seq_len] (0-7)
             - dagesh: binary predictions [batch_size, seq_len] (0/1)
             - sin: binary predictions [batch_size, seq_len] (0/1)
             - stress: binary predictions [batch_size, seq_len] (0/1)
+            - prefix: binary predictions [batch_size, seq_len] (0/1)
         """
         self.eval()
         with torch.no_grad():
             outputs = self.forward(input_ids, attention_mask)
-            
+
             # Vowel: argmax over classes
             vowel_preds = torch.argmax(outputs['vowel_logits'], dim=-1)
-            
+
             # Binary: sigmoid + threshold
             dagesh_preds = (torch.sigmoid(outputs['dagesh_logits']) > 0.5).long()
             sin_preds = (torch.sigmoid(outputs['sin_logits']) > 0.5).long()
             stress_preds = (torch.sigmoid(outputs['stress_logits']) > 0.5).long()
-            
+            prefix_preds = (torch.sigmoid(outputs['prefix_logits']) > 0.5).long()
+
             return {
                 'vowel': vowel_preds,
                 'dagesh': dagesh_preds,
                 'sin': sin_preds,
                 'stress': stress_preds,
+                'prefix': prefix_preds,
             }
 
 

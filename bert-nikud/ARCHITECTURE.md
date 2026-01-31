@@ -15,12 +15,13 @@ The model is built on **DictaBERT Large** (`dicta-il/dictabert-large-char`), a c
 
 ### Classification Heads
 
-The model uses a hybrid approach with **4 separate classification heads**:
+The model uses a hybrid approach with **5 separate classification heads**:
 
-1. **Vowel Classifier** (6-class, mutually exclusive)
-   - Classes: 0=none, 1=patah (ַ), 2=tsere (ֵ), 3=hirik (ִ), 4=holam (ֹ), 5=qubut (ֻ)
+1. **Vowel Classifier** (8-class, mutually exclusive)
+   - Classes: 0=none, 1=patah (ַ), 2=tsere (ֵ), 3=hirik (ִ), 4=holam (ֹ), 5=qubut (ֻ), 6=shva (ְ), 7=vocal shva (ֽ)
    - Uses `CrossEntropyLoss` with label smoothing (0.1)
    - A letter can have at most one vowel
+   - Shva and vocal shva are included because readers are accustomed to seeing them in nikud text. Using only tsere for all "e" sounds would be confusing and too different from traditional nikud. Shva marks silent positions, while vocal shva (encoded as meteg in training data) marks positions that sound like "e".
 
 2. **Dagesh Classifier** (binary)
    - Predicts whether the dagesh mark (ּ) appears
@@ -36,9 +37,14 @@ The model uses a hybrid approach with **4 separate classification heads**:
    - Predicts stress marks (◌֫)
    - Uses `BCEWithLogitsLoss`
 
+5. **Prefix Classifier** (binary)
+   - Predicts prefix boundaries (|) after Hebrew letters
+   - Uses `BCEWithLogitsLoss`
+   - Hebrew has prefix letters (ב, ה, ו, כ, ל, מ, ש) that attach to words. The prefix separator helps identify root words for dictionary lookup (e.g., `ב|ירושלים` = "in Jerusalem")
+
 ### Why This Design?
 
-Vowels are **mutually exclusive** (a letter can't have both patah and tsere), so we use multi-class classification. However, other marks like dagesh, sin, and stress are **independent** and can combine with vowels, so they use binary classification.
+Vowels are **mutually exclusive** (a letter can't have both patah and tsere), so we use multi-class classification. However, other marks like dagesh, sin, stress, and prefix are **independent** and can combine with vowels, so they use binary classification.
 
 ## Data Encoding
 
@@ -51,37 +57,37 @@ plain_text = "האיש hello 123 רצה"  # Everything preserved!
 
 ### Label Structure
 
-Each token gets 4 labels:
+Each token gets 5 labels:
 
 ```python
 labels = [
-    {'vowel': 1, 'dagesh': 0, 'sin': 0, 'stress': 0},  # ה
-    {'vowel': 3, 'dagesh': 0, 'sin': 0, 'stress': 0},  # א
-    {'vowel': 0, 'dagesh': 0, 'sin': 0, 'stress': 0},  # י
-    {'vowel': 0, 'dagesh': 0, 'sin': 0, 'stress': 0},  # ש
-    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100},  # space (ignored)
+    {'vowel': 1, 'dagesh': 0, 'sin': 0, 'stress': 0, 'prefix': 0},  # ה
+    {'vowel': 3, 'dagesh': 0, 'sin': 0, 'stress': 0, 'prefix': 0},  # א
+    {'vowel': 0, 'dagesh': 0, 'sin': 0, 'stress': 0, 'prefix': 0},  # י
+    {'vowel': 0, 'dagesh': 0, 'sin': 0, 'stress': 0, 'prefix': 0},  # ש
+    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100, 'prefix': -100},  # space (ignored)
     
-    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100},  # h (ignored)
-    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100},  # e (ignored)
-    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100},  # l (ignored)
-    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100},  # l (ignored)
-    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100},  # o (ignored)
-    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100},  # space (ignored)
+    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100, 'prefix': -100},  # h (ignored)
+    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100, 'prefix': -100},  # e (ignored)
+    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100, 'prefix': -100},  # l (ignored)
+    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100, 'prefix': -100},  # l (ignored)
+    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100, 'prefix': -100},  # o (ignored)
+    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100, 'prefix': -100},  # space (ignored)
     
-    {'vowel': 1, 'dagesh': 0, 'sin': 0, 'stress': 0},  # ר
-    {'vowel': 1, 'dagesh': 0, 'sin': 0, 'stress': 0},  # צ
-    {'vowel': 0, 'dagesh': 0, 'sin': 0, 'stress': 0},  # ה
-    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100},  # space (ignored)
+    {'vowel': 1, 'dagesh': 0, 'sin': 0, 'stress': 0, 'prefix': 0},  # ר
+    {'vowel': 1, 'dagesh': 0, 'sin': 0, 'stress': 0, 'prefix': 0},  # צ
+    {'vowel': 0, 'dagesh': 0, 'sin': 0, 'stress': 0, 'prefix': 0},  # ה
+    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100, 'prefix': -100},  # space (ignored)
     
-    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100},  # 1 (ignored)
-    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100},  # 2 (ignored)
-    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100},  # 3 (ignored)
+    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100, 'prefix': -100},  # 1 (ignored)
+    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100, 'prefix': -100},  # 2 (ignored)
+    {'vowel': -100, 'dagesh': -100, 'sin': -100, 'stress': -100, 'prefix': -100},  # 3 (ignored)
 ]
 ```
 
 ### Key Points
 
-- **Hebrew letters** get actual label values (0-5 for vowels, 0/1 for binary marks)
+- **Hebrew letters** get actual label values (0-7 for vowels, 0/1 for binary marks)
 - **Non-Hebrew characters** (English, numbers, spaces, punctuation) get `-100` for all labels
 - The `-100` value tells the loss function to **ignore** these positions
 - This allows the model to handle mixed text naturally while only learning Hebrew nikud
@@ -94,13 +100,13 @@ labels = [
    - Label smoothing prevents overconfidence and helps with class imbalance
    - Automatically ignores positions with label `-100`
 
-2. **Binary Losses**: `BCEWithLogitsLoss` for dagesh, sin, and stress
+2. **Binary Losses**: `BCEWithLogitsLoss` for dagesh, sin, stress, and prefix
    - Applied with masking to ignore `-100` positions
    - Each loss is computed independently
 
-3. **Combined Loss**: Simple sum of all 4 losses
+3. **Combined Loss**: Simple sum of all 5 losses
    ```
-   total_loss = vowel_loss + dagesh_loss + sin_loss + stress_loss
+   total_loss = vowel_loss + dagesh_loss + sin_loss + stress_loss + prefix_loss
    ```
 
 ### Training Configuration
@@ -119,12 +125,12 @@ labels = [
    encoding = tokenizer(text, return_tensors='pt')
    ```
 
-2. **Model Forward Pass**: Text goes through BERT + 4 classification heads
+2. **Model Forward Pass**: Text goes through BERT + 5 classification heads
    - BERT produces contextualized embeddings for each token
    - Each head produces logits for its task
 
 3. **Prediction Decoding**:
-   - **Vowels**: `argmax` over 6 classes → class 0-5
+   - **Vowels**: `argmax` over 8 classes → class 0-7
    - **Binary marks**: `sigmoid + threshold (0.5)` → 0 or 1
 
 4. **Text Reconstruction**: Predictions are converted back to nikud characters and combined with the original text

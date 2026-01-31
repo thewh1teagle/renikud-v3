@@ -93,6 +93,7 @@ class NikudPredictor:
             predictions['dagesh'][0],
             predictions['sin'][0],
             predictions['stress'][0],
+            predictions['prefix'][0],
             self.tokenizer
         )
         

@@ -22,17 +22,19 @@ class NikudTrainer(Trainer):
         dagesh_labels = inputs.pop("dagesh_labels")
         sin_labels = inputs.pop("sin_labels")
         stress_labels = inputs.pop("stress_labels")
-        
+        prefix_labels = inputs.pop("prefix_labels")
+
         # Remove non-tensor fields
         inputs.pop("plain_text", None)
         inputs.pop("original_text", None)
-        
+
         outputs = model(
             **inputs,
             vowel_labels=vowel_labels,
             dagesh_labels=dagesh_labels,
             sin_labels=sin_labels,
-            stress_labels=stress_labels
+            stress_labels=stress_labels,
+            prefix_labels=prefix_labels,
         )
         loss = outputs["loss"]
         
@@ -69,6 +71,7 @@ class NikudTrainer(Trainer):
                         predictions['dagesh'][i],
                         predictions['sin'][i],
                         predictions['stress'][i],
+                        predictions['prefix'][i],
                         self.processing_class
                     )
                     

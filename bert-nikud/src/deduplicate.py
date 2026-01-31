@@ -38,7 +38,7 @@ DEDUPLICATE_MAP = {
     '\u05ae': '',
     '\u05af': '',
     # Row 3
-    '\u05b0': '', # Shva -> nothing
+    '\u05b0': '\u05b0', # Shva -> Shva
     '\u05b1': '\u05b5', # Hataf segol -> Tsere (e)
     '\u05b2': '\u05b7', # Hataf patah -> Patah (a)
     '\u05b3': '\u05b9', # Hataf qamats -> Holam (o)
@@ -51,7 +51,7 @@ DEDUPLICATE_MAP = {
     '\u05ba': '\u05b9', # Holam haser for Vav -> Holam (o)
     '\u05bb': '\u05bb', # Qubut -> Qubut (u)
     '\u05bc': '\u05bc', # Dagesh -> Dagesh (u/dagesh mark)
-    '\u05bd': '', # Meteg -> nothing
+    '\u05bd': '\u05bd', # Meteg -> Meteg (Vocal Shva)
     '\u05be': '', # Maqaf -> nothing
     '\u05bf': '', # Rafe -> nothing
     # Row 4

@@ -16,24 +16,26 @@ def decode_predictions(
     Decode model outputs into Hebrew text with nikud.
     
     Args:
-        outputs: Tuple of (vowel_logits, dagesh_logits, sin_logits, stress_logits)
+        outputs: Tuple of (vowel_logits, dagesh_logits, sin_logits, stress_logits, prefix_logits)
         input_ids: Token IDs [batch_size, seq_len]
         tokenizer: Tokenizer for decoding
         
     Returns:
         Text with predicted nikud marks
     """
-    vowel_logits = outputs[0]   # [batch_size, seq_len, 6]
+    vowel_logits = outputs[0]   # [batch_size, seq_len, 8]
     dagesh_logits = outputs[1]  # [batch_size, seq_len]
     sin_logits = outputs[2]     # [batch_size, seq_len]
     stress_logits = outputs[3]  # [batch_size, seq_len]
-    
+    prefix_logits = outputs[4]  # [batch_size, seq_len]
+
     # Convert logits to predictions
     vowel_preds = np.argmax(vowel_logits[0], axis=-1)  # [seq_len]
     dagesh_preds = sigmoid(dagesh_logits[0]) > 0.5
     sin_preds = sigmoid(sin_logits[0]) > 0.5
     stress_preds = sigmoid(stress_logits[0]) > 0.5
-    
+    prefix_preds = sigmoid(prefix_logits[0]) > 0.5
+
     # Reconstruct text with nikud
     result = reconstruct_text(
         input_ids[0],
@@ -41,6 +43,7 @@ def decode_predictions(
         dagesh_preds.astype(np.int32),
         sin_preds.astype(np.int32),
         stress_preds.astype(np.int32),
+        prefix_preds.astype(np.int32),
         tokenizer
     )
     

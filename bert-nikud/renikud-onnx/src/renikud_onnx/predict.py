@@ -7,7 +7,7 @@ import unicodedata
 from pathlib import Path
 
 from .constants import (
-    ID_TO_VOWEL, DAGESH, S_SIN, STRESS_HATAMA,
+    ID_TO_VOWEL, DAGESH, S_SIN, STRESS_HATAMA, PREFIX_SEP,
     CAN_HAVE_DAGESH, CAN_HAVE_SIN, CAN_NOT_HAVE_NIKUD, LETTERS
 )
 
@@ -18,6 +18,7 @@ def reconstruct_text(
     dagesh_preds: np.ndarray,
     sin_preds: np.ndarray,
     stress_preds: np.ndarray,
+    prefix_preds: np.ndarray,
     tokenizer
 ) -> str:
     """
@@ -25,10 +26,11 @@ def reconstruct_text(
     
     Args:
         input_ids: Token IDs [seq_len]
-        vowel_preds: Vowel class predictions [seq_len] (0-5)
+        vowel_preds: Vowel class predictions [seq_len] (0-7)
         dagesh_preds: Dagesh binary predictions [seq_len] (0/1)
         sin_preds: Sin binary predictions [seq_len] (0/1)
         stress_preds: Stress binary predictions [seq_len] (0/1)
+        prefix_preds: Prefix binary predictions [seq_len] (0/1)
         tokenizer: Tokenizer for decoding token IDs
         
     Returns:
@@ -83,6 +85,10 @@ def reconstruct_text(
         # Sort diacritics for canonical order
         diacritics.sort()
         result.extend(diacritics)
+
+        # Add prefix separator if predicted
+        if int(prefix_preds[i]) == 1:
+            result.append(PREFIX_SEP)
     
     # Combine and normalize
     text = ''.join(result)

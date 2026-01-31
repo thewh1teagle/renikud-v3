@@ -12,17 +12,19 @@ def reconstruct_text_from_predictions(
     dagesh_preds: torch.Tensor,
     sin_preds: torch.Tensor,
     stress_preds: torch.Tensor,
+    prefix_preds: torch.Tensor,
     tokenizer
 ) -> str:
     """
     Reconstruct Hebrew text with nikud marks from model predictions.
-    
+
     Args:
         input_ids: Token IDs [seq_len]
-        vowel_preds: Vowel class predictions [seq_len] (0-5)
+        vowel_preds: Vowel class predictions [seq_len] (0-7)
         dagesh_preds: Dagesh binary predictions [seq_len] (0/1)
         sin_preds: Sin binary predictions [seq_len] (0/1)
         stress_preds: Stress binary predictions [seq_len] (0/1)
+        prefix_preds: Prefix binary predictions [seq_len] (0/1)
         tokenizer: Tokenizer for decoding token IDs
         
     Returns:
@@ -30,7 +32,7 @@ def reconstruct_text_from_predictions(
     """
     # Import here to avoid circular dependencies
     from dataset import ID_TO_VOWEL
-    from constants import DAGESH, S_SIN, STRESS_HATAMA, CAN_HAVE_DAGESH, CAN_HAVE_SIN, LETTERS, CAN_NOT_HAVE_NIKUD
+    from constants import DAGESH, S_SIN, STRESS_HATAMA, PREFIX_SEP, CAN_HAVE_DAGESH, CAN_HAVE_SIN, LETTERS, CAN_NOT_HAVE_NIKUD
     from normalize import normalize
     result = []
     
@@ -81,6 +83,10 @@ def reconstruct_text_from_predictions(
         # Sort diacritics for canonical order
         diacritics.sort()
         result.extend(diacritics)
+
+        # Add prefix separator if predicted
+        if prefix_preds[i].item() == 1:
+            result.append(PREFIX_SEP)
     
     # Combine and normalize (keep as NFD to match training data)
     text = ''.join(result)

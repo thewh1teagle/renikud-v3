@@ -4,12 +4,15 @@ https://en.wikipedia.org/wiki/Unicode_and_HTML_for_the_Hebrew_alphabet#Compact_t
 
 A_PATAH = '\u05b7' # a
 E_TSERE = '\u05b5' # e
+E_VOCAL_SHVA = '\u05bd' # vocal shva (meteg) - sounds like e
 I_HIRIK = '\u05b4' # i
 O_HOLAM = '\u05b9' # o
 U_QUBUT = '\u05bb' # u
-DAGESH = '\u05bc' # u/dagesh mark
+SHVA = '\u05b0' # silent shva
+DAGESH = '\u05bc' # dagesh mark
 S_SIN = '\u05c2' # s (sin)
 STRESS_HATAMA = '\u05ab' # stress mark
+PREFIX_SEP = '|' # prefix boundary separator
 
 FINAL_LETTERS = "ךםןףץ"
 LETTERS = 'אבגדהוזחטיכלמנסעפצקרשת' + FINAL_LETTERS
