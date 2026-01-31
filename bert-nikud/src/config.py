@@ -58,6 +58,18 @@ def get_args():
         "--max-epochs", type=int, default=10, help="Maximum number of training epochs"
     )
     parser.add_argument(
+        "--eval-steps",
+        type=int,
+        default=1000,
+        help="Evaluate every N steps",
+    )
+    parser.add_argument(
+        "--save-steps",
+        type=int,
+        default=1000,
+        help="Save checkpoint every N steps",
+    )
+    parser.add_argument(
         "--max-grad-norm",
         type=float,
         default=1.0,
