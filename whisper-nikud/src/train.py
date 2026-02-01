@@ -53,6 +53,16 @@ def main():
         )
 
     dataset = datasets.load_from_disk(args.dataset_cache_path)
+    max_label_length = model.config.max_length
+    before_counts = {split: dataset[split].num_rows for split in dataset.keys()}
+    dataset = dataset.filter(lambda x: len(x["labels"]) <= max_label_length)
+    after_counts = {split: dataset[split].num_rows for split in dataset.keys()}
+    skipped_counts = {
+        split: before_counts[split] - after_counts[split] for split in before_counts
+    }
+    total_skipped = sum(skipped_counts.values())
+    if total_skipped:
+        print(f"Skipped {total_skipped} samples with labels > {max_label_length}")
 
     # Data collator
     data_collator = DataCollatorSpeechSeq2SeqWithPadding(
