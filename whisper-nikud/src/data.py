@@ -55,7 +55,7 @@ def preprocess_dataset(
     batch_size: int = 16,
 ) -> DatasetDict:
     if num_proc is None:
-        num_proc = os.cpu_count() or 1
+        num_proc = min(6, os.cpu_count() or 1)
 
     return dataset.map(
         lambda batch: prepare_dataset(batch, processor),
