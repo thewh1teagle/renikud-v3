@@ -20,3 +20,4 @@ ilspeech_speaker1_v1/
 ilspeech_speaker2_v1/
 saspeech_automatic/
 saspeech_manual/
+*.wav
