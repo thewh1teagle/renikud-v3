@@ -16,24 +16,7 @@ import regex as re
 from tqdm import tqdm
 from normalize import normalize
 
-SHVA = "\u05b0"
-VOCAL_SHVA = "\u05bd"
 
-
-def normalize_vocal_shva(text: str) -> str:
-    """
-    When a letter has both shva and meteg (vocal shva) in its diacritics,
-    remove the shva and keep only the meteg as vocal shva.
-    """
-
-    def callback(match):
-        letter = match.group(1)
-        diac = list(match.group(2))
-        if SHVA in diac and VOCAL_SHVA in diac:
-            diac = [d for d in diac if d != SHVA]
-        return letter + "".join(diac)
-
-    return re.sub(r"(\p{L})(\p{M}+)", callback, text)
 
 
 def prepare_data(input_file, output_dir, num_lines, val_ratio, seed):
@@ -61,7 +44,6 @@ def prepare_data(input_file, output_dir, num_lines, val_ratio, seed):
             # Take only the Hebrew nikud column (before tab)
             cleaned_line = line.split("\t")[0] + "\n"
             cleaned_line = normalize(cleaned_line)
-            cleaned_line = normalize_vocal_shva(cleaned_line)
             lines.append(cleaned_line)
 
     # Shuffle and split
