@@ -10,6 +10,7 @@ dependencies = [
     "jiwer>=4.0.0",
     "librosa>=0.11.0",
     "openai-whisper>=20250625",
+    "pydub>=0.25.1",
     "soundfile>=0.13.1",
     "torchaudio>=2.8.0",
     "transformers>=4.52.0",

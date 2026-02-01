@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Union
 import numpy as np
 import pandas as pd
 from datasets import Dataset, DatasetDict
-import librosa
+import soundfile as sf
 import torch
 
 from config import SEP
@@ -31,8 +31,10 @@ def load_dataset_from_csv(
 
 
 def load_audio(path: str, target_sr: int) -> np.ndarray:
-    audio, _ = librosa.load(path, sr=target_sr, mono=True)
-    return audio.astype(np.float32)
+    audio, sr = sf.read(path, dtype="float32")
+    if audio.ndim > 1:
+        audio = audio.mean(axis=1)
+    return audio
 
 
 def prepare_dataset(batch: Dict[str, List], processor, sampling_rate: int = 16000):

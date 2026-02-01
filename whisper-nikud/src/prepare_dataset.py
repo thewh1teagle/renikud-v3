@@ -14,8 +14,11 @@ import os
 import sys
 from pathlib import Path
 
+from pydub import AudioSegment
 from config import SEP
 from transformers import WhisperTokenizer
+
+TARGET_SAMPLE_RATE = 16000
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 BERT_NIKUD_SRC = ROOT_DIR / "bert-nikud" / "src"
@@ -80,7 +83,10 @@ def main():
                 new_wav = wav_output_path / f"{counter}.wav"
 
                 if original_wav.exists():
-                    os.link(original_wav, new_wav)
+                    audio = AudioSegment.from_wav(str(original_wav))
+                    if audio.frame_rate != TARGET_SAMPLE_RATE:
+                        audio = audio.set_frame_rate(TARGET_SAMPLE_RATE)
+                    audio.export(str(new_wav), format="wav")
                     combined_data.append(f"{counter}{SEP}{text}")
                     counter += 1
 
