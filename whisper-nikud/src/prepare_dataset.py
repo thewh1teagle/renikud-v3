@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 from pydub import AudioSegment
+from tqdm import tqdm
 from config import SEP
 from transformers import WhisperTokenizer
 
@@ -51,44 +52,47 @@ def main():
     skipped = 0
     counter = 0
 
+    # Collect all lines for tqdm total
+    all_lines = []
     for input_folder in args.input_folder:
         input_path = Path(input_folder)
         metadata_path = input_path / "metadata.csv"
         if not metadata_path.exists():
             raise FileNotFoundError(f"Missing metadata.csv in {input_path}")
-
         with metadata_path.open("r", encoding="utf-8") as f:
-            for line in f:
-                line = line.rstrip("\n")
-                if not line:
-                    continue
+            all_lines.extend((input_path, line) for line in f)
 
-                parts = line.split(SRC_SEP)
-                if len(parts) < 2:
-                    continue
+    for input_path, line in tqdm(all_lines):
+        line = line.rstrip("\n")
+        if not line:
+            continue
 
-                index = parts[0]
-                text = normalize(parts[1].strip())
+        parts = line.split(SRC_SEP)
+        if len(parts) < 2:
+            continue
 
-                if not text:
-                    print(f"Skipping {text} because it is too short")
-                    continue
+        index = parts[0]
+        text = normalize(parts[1].strip())
 
-                token_length = len(tokenizer(text).input_ids)
-                if token_length > MAX_LABEL_LENGTH:
-                    skipped += 1
-                    continue
+        if not text:
+            print(f"Skipping {text} because it is too short")
+            continue
 
-                original_wav = input_path / "wav" / f"{index}.wav"
-                new_wav = wav_output_path / f"{counter}.wav"
+        token_length = len(tokenizer(text).input_ids)
+        if token_length > MAX_LABEL_LENGTH:
+            skipped += 1
+            continue
 
-                if original_wav.exists():
-                    audio = AudioSegment.from_wav(str(original_wav))
-                    if audio.frame_rate != TARGET_SAMPLE_RATE:
-                        audio = audio.set_frame_rate(TARGET_SAMPLE_RATE)
-                    audio.export(str(new_wav), format="wav")
-                    combined_data.append(f"{counter}{SEP}{text}")
-                    counter += 1
+        original_wav = input_path / "wav" / f"{index}.wav"
+        new_wav = wav_output_path / f"{counter}.wav"
+
+        if original_wav.exists():
+            audio = AudioSegment.from_wav(str(original_wav))
+            if audio.frame_rate != TARGET_SAMPLE_RATE:
+                audio = audio.set_frame_rate(TARGET_SAMPLE_RATE)
+            audio.export(str(new_wav), format="wav")
+            combined_data.append(f"{counter}{SEP}{text}")
+            counter += 1
 
     # Save combined metadata
     with open(output_path / "metadata.csv", "w") as f:
