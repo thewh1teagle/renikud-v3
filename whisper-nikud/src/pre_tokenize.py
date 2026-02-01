@@ -21,6 +21,8 @@ def parse_args():
     )
     parser.add_argument("--dataset_cache_path", type=str, default="./.dataset-cache")
     parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--device", type=str, default=None, help="Device for feature extraction (e.g. cuda, cpu)")
+    parser.add_argument("--num_proc", type=int, default=None)
     return parser.parse_args()
 
 
@@ -45,6 +47,8 @@ def main():
         dataset,
         processor,
         batch_size=args.batch_size,
+        device=args.device,
+        num_proc=args.num_proc,
     )
 
     dataset.save_to_disk(cache_path)

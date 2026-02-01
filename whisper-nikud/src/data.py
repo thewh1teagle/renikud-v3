@@ -37,11 +37,11 @@ def load_audio(path: str, target_sr: int) -> np.ndarray:
     return audio
 
 
-def prepare_dataset(batch: Dict[str, List], processor, sampling_rate: int = 16000):
+def prepare_dataset(batch: Dict[str, List], processor, sampling_rate: int = 16000, device: str | None = None):
     audio_paths = batch["audio"]
     arrays = [load_audio(path, sampling_rate) for path in audio_paths]
 
-    features = processor.feature_extractor(arrays, sampling_rate=sampling_rate)
+    features = processor.feature_extractor(arrays, sampling_rate=sampling_rate, device=device)
     labels = processor.tokenizer(batch["text"])
 
     return {
@@ -55,12 +55,13 @@ def preprocess_dataset(
     processor,
     num_proc: int | None = None,
     batch_size: int = 16,
+    device: str | None = None,
 ) -> DatasetDict:
     if num_proc is None:
         num_proc = min(6, os.cpu_count() or 1)
 
     return dataset.map(
-        lambda batch: prepare_dataset(batch, processor),
+        lambda batch: prepare_dataset(batch, processor, device=device),
         batched=True,
         batch_size=batch_size,
         remove_columns=dataset["train"].column_names,
