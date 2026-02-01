@@ -22,4 +22,5 @@ def get_args():
         "--report_to", type=str, default="tensorboard", choices=["wandb", "tensorboard"]
     )
     parser.add_argument("--dataset_cache_path", type=str, default="./.dataset-cache")
+    parser.add_argument("--resume_from_checkpoint", type=str, default=None, help="Path to checkpoint or 'latest'")
     return parser.parse_args()

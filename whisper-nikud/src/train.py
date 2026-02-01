@@ -97,7 +97,7 @@ def main():
     )
 
     # Train
-    trainer.train()
+    trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
 
     # Save model
     trainer.save_model()
