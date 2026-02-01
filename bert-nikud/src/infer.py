@@ -102,6 +102,7 @@ class NikudPredictor:
 
         # Reconstruct text with nikud using shared function
         nikud_text = reconstruct_text_from_predictions(
+            text,
             input_ids[0],
             offset_mapping,
             predictions["vowel"][0],

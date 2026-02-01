@@ -165,6 +165,7 @@ def evaluate(
                     offset_mapping = enc["offset_mapping"][0]
 
                 predicted_text = reconstruct_text_from_predictions(
+                    batch["plain_text"][i],
                     input_ids[i],
                     offset_mapping,
                     vowel_preds[i],

@@ -1,11 +1,18 @@
 """
 Utility functions for reconstructing Hebrew text with nikud from predictions.
+
+Key rule: reconstruction must be anchored to the *original input text*, not to
+`tokenizer.decode(token_id)`. Decoding token IDs can yield "[UNK]" when the
+wrong tokenizer is used (or special tokens differ), which corrupts output.
+
+We therefore use `offset_mapping` to slice from the original `text`.
 """
 
 import torch
 
 
 def reconstruct_text_from_predictions(
+    text: str,
     input_ids: torch.Tensor,
     offset_mapping: torch.Tensor,
     vowel_preds: torch.Tensor,
@@ -15,10 +22,10 @@ def reconstruct_text_from_predictions(
     prefix_preds: torch.Tensor,
     tokenizer,
 ) -> str:
-    """
-    Reconstruct Hebrew text with nikud marks from model predictions.
+    """Reconstruct text with predicted nikud marks.
 
     Args:
+        text: The original (diacritics-stripped) input text that was tokenized.
         input_ids: Token IDs [seq_len]
         offset_mapping: Offset mapping for each token [seq_len, 2] (char_start, char_end)
         vowel_preds: Vowel class predictions [seq_len] (0-7)
@@ -26,10 +33,10 @@ def reconstruct_text_from_predictions(
         sin_preds: Sin binary predictions [seq_len] (0/1)
         stress_preds: Stress binary predictions [seq_len] (0/1)
         prefix_preds: Prefix binary predictions [seq_len] (0/1)
-        tokenizer: Tokenizer for decoding token IDs
+        tokenizer: Tokenizer (used only for special token IDs)
 
     Returns:
-        Text with predicted nikud marks
+        Text with predicted nikud marks.
     """
     # Import here to avoid circular dependencies
     from dataset import ID_TO_VOWEL
@@ -47,31 +54,40 @@ def reconstruct_text_from_predictions(
 
     result = []
 
-    # Get special token IDs
+    # Special token IDs (may be None for some tokenizers)
     sep_token_id = tokenizer.sep_token_id
     pad_token_id = tokenizer.pad_token_id
 
-    # Use offset_mapping to properly map predictions to characters
-    # offset_mapping has shape [seq_len, 2] where each entry is (char_start, char_end)
+    # Start from 1 to skip [CLS] (assumes add_special_tokens=True)
     for i in range(1, len(input_ids)):
+        token_id = input_ids[i].item()
+
         # Stop at special tokens
-        if input_ids[i].item() == sep_token_id or input_ids[i].item() == pad_token_id:
+        if (sep_token_id is not None and token_id == sep_token_id) or (
+            pad_token_id is not None and token_id == pad_token_id
+        ):
             break
 
-        # Get character range using offset_mapping
         char_start, char_end = offset_mapping[i].tolist()
         char_start = int(char_start)
         char_end = int(char_end)
 
-        # Get the character from input_ids
-        char = tokenizer.decode([input_ids[i].item()])
-        result.append(char)
+        # Some tokenizers produce (0, 0) offsets for special tokens; skip.
+        if char_end <= char_start:
+            continue
 
-        # Only add nikud marks for Hebrew letters
+        segment = text[char_start:char_end]
+        result.append(segment)
+
+        # We only know how to attach diacritics when the segment is a single Hebrew letter.
+        if len(segment) != 1:
+            continue
+
+        char = segment
+
         if char not in LETTERS:
             continue
 
-        # Skip nikud for final letters (they can't have nikud)
         if char in CAN_NOT_HAVE_NIKUD:
             continue
 
@@ -98,7 +114,6 @@ def reconstruct_text_from_predictions(
 
         # Sort diacritics for canonical order
         diacritics.sort()
-
         result.extend(diacritics)
 
         # Add prefix separator if predicted
@@ -106,7 +121,6 @@ def reconstruct_text_from_predictions(
             result.append(PREFIX_SEP)
 
     # Combine and normalize (keep as NFD to match training data)
-    text = "".join(result)
-    text = normalize(text)  # Apply same normalization as training data (outputs NFD)
-
-    return text
+    out = "".join(result)
+    out = normalize(out)
+    return out
