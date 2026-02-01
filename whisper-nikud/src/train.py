@@ -74,6 +74,7 @@ def main():
         eval_strategy="steps",
         eval_steps=args.eval_steps,
         save_steps=args.save_steps,
+        save_total_limit=args.save_total_limit,
         logging_steps=25,
         predict_with_generate=True,
         generation_max_length=225,

@@ -17,6 +17,7 @@ def get_args():
     parser.add_argument("--max_steps", type=int, default=1000)
     parser.add_argument("--save_steps", type=int, default=200)
     parser.add_argument("--eval_steps", type=int, default=200)
+    parser.add_argument("--save_total_limit", type=int, default=3)
     parser.add_argument(
         "--report_to", type=str, default="tensorboard", choices=["wandb", "tensorboard"]
     )
