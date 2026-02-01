@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 from config import SEP
+from transformers import WhisperTokenizer
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 BERT_NIKUD_SRC = ROOT_DIR / "bert-nikud" / "src"
@@ -27,15 +28,24 @@ SRC_SEP = "\t"
 parser = argparse.ArgumentParser()
 parser.add_argument("--input_folder", type=str, nargs="+", required=True)
 parser.add_argument("--output_folder", type=str, required=True)
+parser.add_argument("--model_name", type=str, default="ivrit-ai/whisper-large-v3-turbo")
 args = parser.parse_args()
+
+# Whisper's decoder hard limit is 448 tokens (tokenizer.model_max_length is unreliable)
+MAX_LABEL_LENGTH = 448
 
 
 def main():
+    tokenizer = WhisperTokenizer.from_pretrained(
+        args.model_name, language="Hebrew", task="transcribe"
+    )
+
     output_path = Path(args.output_folder)
     wav_output_path = output_path / "wav"
     wav_output_path.mkdir(parents=True, exist_ok=True)
 
     combined_data = []
+    skipped = 0
     counter = 0
 
     for input_folder in args.input_folder:
@@ -61,6 +71,11 @@ def main():
                     print(f"Skipping {text} because it is too short")
                     continue
 
+                token_length = len(tokenizer(text).input_ids)
+                if token_length > MAX_LABEL_LENGTH:
+                    skipped += 1
+                    continue
+
                 original_wav = input_path / "wav" / f"{index}.wav"
                 new_wav = wav_output_path / f"{counter}.wav"
 
@@ -73,7 +88,7 @@ def main():
     with open(output_path / "metadata.csv", "w") as f:
         f.write("\n".join(combined_data))
 
-    print(f"Total files processed: {len(combined_data)}")
+    print(f"Total files processed: {len(combined_data)}, skipped {skipped} (labels > {MAX_LABEL_LENGTH} tokens)")
 
 
 if __name__ == "__main__":

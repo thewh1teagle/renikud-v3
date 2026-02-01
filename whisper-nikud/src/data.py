@@ -57,18 +57,6 @@ def preprocess_dataset(
     if num_proc is None:
         num_proc = min(6, os.cpu_count() or 1)
 
-    # Whisper's decoder hard limit is 448 tokens (tokenizer.model_max_length is unreliable)
-    max_label_length = 448
-
-    def is_within_max_length(example: Dict[str, str]) -> bool:
-        length = len(processor.tokenizer(example["text"]).input_ids)
-        if length > max_label_length:
-            print(f"Skipping sample with label length {length} > {max_label_length}")
-            return False
-        return True
-
-    dataset = dataset.filter(is_within_max_length, num_proc=num_proc)
-
     return dataset.map(
         lambda batch: prepare_dataset(batch, processor),
         batched=True,
