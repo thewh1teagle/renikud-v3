@@ -123,7 +123,7 @@ def get_args():
     parser.add_argument(
         "--wandb-mode",
         type=str,
-        default="online",
+        default="offline",
         choices=["online", "offline", "disabled"],
         help="Wandb logging mode",
     )
