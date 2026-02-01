@@ -51,5 +51,6 @@ def normalize(text: str):
     text = unicodedata.normalize("NFD", text)  # Decomposite
     text = sort_diacritics(text)
     text = clean_dagesh(text)
+    text = normalize_vocal_shva(text)
     text = deduplicate(text)
     return text

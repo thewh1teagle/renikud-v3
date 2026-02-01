@@ -3,8 +3,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Union
 
+import numpy as np
 import pandas as pd
-from datasets import Audio, Dataset, DatasetDict
+from datasets import Dataset, DatasetDict
+import librosa
 import torch
 
 from config import SEP
@@ -25,14 +27,17 @@ def load_dataset_from_csv(
         str(data_path / "wav" / f"{filename}.wav") for filename in df["filename"]
     ]
     dataset = Dataset.from_dict({"audio": audio_paths, "text": df["text"].tolist()})
-    dataset = dataset.cast_column("audio", Audio(sampling_rate=sampling_rate))
     return dataset.train_test_split(test_size=test_size, seed=seed)
 
 
-def prepare_dataset(batch: Dict[str, List], processor):
-    audio = batch["audio"]
-    arrays = [a["array"] for a in audio]
-    sampling_rate = audio[0]["sampling_rate"] if audio else 16000
+def load_audio(path: str, target_sr: int) -> np.ndarray:
+    audio, _ = librosa.load(path, sr=target_sr, mono=True)
+    return audio.astype(np.float32)
+
+
+def prepare_dataset(batch: Dict[str, List], processor, sampling_rate: int = 16000):
+    audio_paths = batch["audio"]
+    arrays = [load_audio(path, sampling_rate) for path in audio_paths]
 
     features = processor.feature_extractor(arrays, sampling_rate=sampling_rate)
     labels = processor.tokenizer(batch["text"])

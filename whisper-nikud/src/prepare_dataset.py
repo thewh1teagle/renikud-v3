@@ -5,14 +5,22 @@ sudo apt install p7zip-full -y
 7z x saspeech_automatic.7z
 7z x saspeech_manual_v1.7z
 
-uv run src/prepare.py --input_folder saspeech_automatic saspeech_manual --output_folder dataset
+uv run src/prepare_dataset.py --input_folder saspeech_automatic saspeech_manual --output_folder dataset
 rm -r saspeech_automatic saspeech_manual
 """
 
 import argparse
 import os
+import sys
 from pathlib import Path
+
 from config import SEP
+
+ROOT_DIR = Path(__file__).resolve().parents[2]
+BERT_NIKUD_SRC = ROOT_DIR / "bert-nikud" / "src"
+sys.path.insert(0, str(BERT_NIKUD_SRC))
+
+from normalize import normalize # noqa: E402
 
 SRC_SEP = "\t"
 
@@ -47,7 +55,11 @@ def main():
                     continue
 
                 index = parts[0]
-                text = parts[1].strip()
+                text = normalize(parts[1].strip())
+
+                if not text:
+                    print(f"Skipping {text} because it is too short")
+                    continue
 
                 original_wav = input_path / "wav" / f"{index}.wav"
                 new_wav = wav_output_path / f"{counter}.wav"
