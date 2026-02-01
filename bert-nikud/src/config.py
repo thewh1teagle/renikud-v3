@@ -60,13 +60,13 @@ def get_args():
     parser.add_argument(
         "--eval-steps",
         type=int,
-        default=1000,
+        default=500,
         help="Evaluate every N steps",
     )
     parser.add_argument(
         "--save-steps",
         type=int,
-        default=1000,
+        default=500,
         help="Save checkpoint every N steps",
     )
     parser.add_argument(

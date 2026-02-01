@@ -2,12 +2,12 @@
 Pretokenize dataset files and save as Arrow datasets for fast loading.
 
 Usage:
-    uv run python src/pretokenize.py --dataset-dir dataset
-    uv run python src/pretokenize.py --dataset-dir dataset --workers 8
+    uv run python src/pretokenize.py --input-txt dataset/train.txt --output-dir dataset/.cache/train
+    uv run python src/pretokenize.py --input-txt dataset/val.txt --output-dir dataset/.cache/val
 
-This finds all .txt files in the dataset dir, processes each line with
-prepare_training_data(), and saves Arrow datasets to <dir>/.cache/<name>/.
-Skips files whose cache is newer than the source .txt file.
+This processes a single .txt file, runs prepare_training_data() per line,
+and saves the Arrow dataset to the output directory. Skips if the cache
+is newer than the source .txt file.
 """
 
 import argparse
@@ -49,11 +49,13 @@ def pretokenize_file(
     """Process a single .txt file and save as Arrow dataset."""
     # Check if cache is fresh
     if cache_path.exists():
-        cache_mtime = os.path.getmtime(cache_path / "dataset_info.json")
-        src_mtime = os.path.getmtime(txt_path)
-        if cache_mtime > src_mtime:
-            print(f"Skipping {txt_path.name} (cache is up to date)")
-            return
+        cache_info = cache_path / "dataset_info.json"
+        if cache_info.exists():
+            cache_mtime = os.path.getmtime(cache_info)
+            src_mtime = os.path.getmtime(txt_path)
+            if cache_mtime > src_mtime:
+                print(f"Skipping {txt_path.name} (cache is up to date)")
+                return
 
     print(f"Processing {txt_path.name} with {num_workers} workers...")
     texts = load_dataset_from_file(str(txt_path))
@@ -66,18 +68,20 @@ def pretokenize_file(
         results = []
         for text in tqdm(texts, desc=f"Processing {txt_path.name}", unit="lines"):
             data = prepare_training_data(text, tokenizer)
-            results.append({
-                "input_ids": data["input_ids"].tolist(),
-                "attention_mask": data["attention_mask"].tolist(),
-                "vowel_labels": data["vowel_labels"].tolist(),
-                "dagesh_labels": data["dagesh_labels"].tolist(),
-                "sin_labels": data["sin_labels"].tolist(),
-                "stress_labels": data["stress_labels"].tolist(),
-                "prefix_labels": data["prefix_labels"].tolist(),
-                "offset_mapping": data["offset_mapping"].tolist(),
-                "plain_text": data["plain_text"],
-                "original_text": data["original_text"],
-            })
+            results.append(
+                {
+                    "input_ids": data["input_ids"].tolist(),
+                    "attention_mask": data["attention_mask"].tolist(),
+                    "vowel_labels": data["vowel_labels"].tolist(),
+                    "dagesh_labels": data["dagesh_labels"].tolist(),
+                    "sin_labels": data["sin_labels"].tolist(),
+                    "stress_labels": data["stress_labels"].tolist(),
+                    "prefix_labels": data["prefix_labels"].tolist(),
+                    "offset_mapping": data["offset_mapping"].tolist(),
+                    "plain_text": data["plain_text"],
+                    "original_text": data["original_text"],
+                }
+            )
     else:
         # Multiprocessing
         with Pool(num_workers) as pool:
@@ -101,10 +105,16 @@ def pretokenize_file(
 def main():
     parser = argparse.ArgumentParser(description="Pretokenize dataset files")
     parser.add_argument(
-        "--dataset-dir",
+        "--input-txt",
         type=str,
-        default="dataset",
-        help="Directory containing .txt dataset files",
+        required=True,
+        help="Path to a single .txt dataset file",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        required=True,
+        help="Directory to write the Arrow dataset cache",
     )
     parser.add_argument(
         "--tokenizer-path",
@@ -120,22 +130,19 @@ def main():
     )
     args = parser.parse_args()
 
-    dataset_dir = Path(args.dataset_dir)
-    cache_dir = dataset_dir / ".cache"
-    cache_dir.mkdir(exist_ok=True)
+    input_txt = Path(args.input_txt)
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    txt_files = sorted(dataset_dir.glob("*.txt"))
-    if not txt_files:
-        print(f"No .txt files found in {dataset_dir}")
+    if not input_txt.exists():
+        print(f"Input file not found: {input_txt}")
         return
 
-    print(f"Found {len(txt_files)} files: {[f.name for f in txt_files]}")
+    print(f"Processing file: {input_txt.name}")
+    print(f"Output dir: {output_dir}")
     print(f"Workers: {args.workers}")
 
-    for txt_path in txt_files:
-        name = txt_path.stem
-        cache_path = cache_dir / name
-        pretokenize_file(txt_path, cache_path, args.tokenizer_path, args.workers)
+    pretokenize_file(input_txt, output_dir, args.tokenizer_path, args.workers)
 
     print("\nDone!")
 
