@@ -57,7 +57,8 @@ def preprocess_dataset(
     if num_proc is None:
         num_proc = min(6, os.cpu_count() or 1)
 
-    max_label_length = processor.tokenizer.model_max_length
+    # Whisper's decoder hard limit is 448 tokens (tokenizer.model_max_length is unreliable)
+    max_label_length = 448
 
     def is_within_max_length(example: Dict[str, str]) -> bool:
         length = len(processor.tokenizer(example["text"]).input_ids)
