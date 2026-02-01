@@ -1,11 +1,15 @@
-"""
-Utility functions for reconstructing Hebrew text with nikud from predictions.
+"""Utility functions for reconstructing Hebrew text with nikud from predictions.
 
-Key rule: reconstruction must be anchored to the *original input text*, not to
-`tokenizer.decode(token_id)`. Decoding token IDs can yield "[UNK]" when the
-wrong tokenizer is used (or special tokens differ), which corrupts output.
+Design goals:
+- Reconstruction must be anchored to the *original input text*, not to
+  `tokenizer.decode(token_id)` (which can yield "[UNK]" for mismatched tokenizers).
+- Preserve the original text *exactly* (including spaces/punctuation), and only
+  insert predicted diacritics after the relevant Hebrew letters.
 
-We therefore use `offset_mapping` to slice from the original `text`.
+We therefore:
+1) Start from the original `text` (diacritics-stripped) as a character list.
+2) Use `offset_mapping` to map token-level predictions to character positions.
+3) Insert nikud marks after the corresponding character index.
 """
 
 import torch
@@ -36,8 +40,9 @@ def reconstruct_text_from_predictions(
         tokenizer: Tokenizer (used only for special token IDs)
 
     Returns:
-        Text with predicted nikud marks.
+        Text with predicted nikud marks (original text preserved).
     """
+
     # Import here to avoid circular dependencies
     from dataset import ID_TO_VOWEL
     from constants import (
@@ -52,7 +57,11 @@ def reconstruct_text_from_predictions(
     )
     from normalize import normalize
 
-    result = []
+    # Base text (preserve as-is)
+    chars = list(text)
+
+    # Collect insertions after character index
+    inserts_after = {i: [] for i in range(len(chars))}
 
     # Special token IDs (may be None for some tokenizers)
     sep_token_id = tokenizer.sep_token_id
@@ -76,18 +85,18 @@ def reconstruct_text_from_predictions(
         if char_end <= char_start:
             continue
 
-        segment = text[char_start:char_end]
-        result.append(segment)
-
-        # We only know how to attach diacritics when the segment is a single Hebrew letter.
-        if len(segment) != 1:
+        # We only know how to attach diacritics when this token maps to exactly
+        # one character in the original string.
+        if char_end - char_start != 1:
             continue
 
-        char = segment
+        pos = char_start
+        if pos < 0 or pos >= len(chars):
+            continue
 
+        char = chars[pos]
         if char not in LETTERS:
             continue
-
         if char in CAN_NOT_HAVE_NIKUD:
             continue
 
@@ -112,15 +121,21 @@ def reconstruct_text_from_predictions(
         if stress_preds[i].item() == 1:
             diacritics.append(STRESS_HATAMA)
 
-        # Sort diacritics for canonical order
         diacritics.sort()
-        result.extend(diacritics)
+        inserts_after[pos].extend(diacritics)
 
         # Add prefix separator if predicted
         if prefix_preds[i].item() == 1:
-            result.append(PREFIX_SEP)
+            inserts_after[pos].append(PREFIX_SEP)
 
-    # Combine and normalize (keep as NFD to match training data)
-    out = "".join(result)
+    # Build output preserving original characters (including spaces)
+    out_parts = []
+    for idx, ch in enumerate(chars):
+        out_parts.append(ch)
+        extra = inserts_after.get(idx)
+        if extra:
+            out_parts.extend(extra)
+
+    out = "".join(out_parts)
     out = normalize(out)
     return out
