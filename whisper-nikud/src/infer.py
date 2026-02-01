@@ -33,12 +33,16 @@ def main():
         default="thewh1teagle/whisper-heb-nikud",
         help="Model name or path for Whisper (default: ivrit-ai/whisper-large-v3-turbo)",
     )
+    parser.add_argument("--device", type=str, default=None, help="Device (e.g. cpu, cuda)")
     args = parser.parse_args()
 
     MODEL_NAME = args.model
     BATCH_SIZE = 8
 
-    device = 0 if torch.cuda.is_available() else "cpu"
+    if args.device:
+        device = args.device
+    else:
+        device = 0 if torch.cuda.is_available() else "cpu"
 
     pipe = pipeline(
         task="automatic-speech-recognition",
@@ -85,14 +89,13 @@ def main():
                         f"Warning: Could not delete temporary file {normalized_file}: {e}"
                     )
 
-    demo = gr.Blocks(
-        css="""
+    css = """
         .large-textbox textarea {
             font-size: 20px !important;
             line-height: 1.6 !important;
         }
         """
-    )
+    demo = gr.Blocks()
 
     mic_transcribe = gr.Interface(
         fn=transcribe,
@@ -105,7 +108,7 @@ def main():
             lines=6,
             max_lines=15,
             min_width=400,
-            show_copy_button=True,
+
             placeholder="Transcribed text will appear here...",
             elem_classes=["large-textbox"],
         ),
@@ -130,7 +133,7 @@ def main():
             lines=6,
             max_lines=15,
             min_width=400,
-            show_copy_button=True,
+
             placeholder="Transcribed text will appear here...",
             elem_classes=["large-textbox"],
         ),
@@ -154,7 +157,7 @@ def main():
             ["Transcribe Audio File", "Transcribe Microphone"],
         )
 
-    demo.launch(server_name="0.0.0.0", server_port=7860)
+    demo.launch(server_name="0.0.0.0", server_port=7860, css=css)
 
 
 if __name__ == "__main__":
