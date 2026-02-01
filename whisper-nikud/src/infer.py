@@ -112,14 +112,14 @@ def main():
             placeholder="Transcribed text will appear here...",
             elem_classes=["large-textbox"],
         ),
-        theme="huggingface",
+
         title="Whisper Demo: Transcribe Audio",
         description=(
             "Transcribe long-form microphone or audio inputs with the click of a button! Demo uses the"
             f" checkpoint [{MODEL_NAME}](https://huggingface.co/{MODEL_NAME}) and 🤗 Transformers to transcribe audio files"
             " of arbitrary length."
         ),
-        allow_flagging="never",
+
     )
 
     file_transcribe = gr.Interface(
@@ -137,7 +137,7 @@ def main():
             placeholder="Transcribed text will appear here...",
             elem_classes=["large-textbox"],
         ),
-        theme="huggingface",
+
         title="Whisper Demo: Transcribe Audio",
         description=(
             "Transcribe long-form microphone or audio inputs with the click of a button! Demo uses the"
@@ -148,7 +148,7 @@ def main():
             ["./example1.wav", "transcribe"],
         ],
         cache_examples=True,
-        allow_flagging="never",
+
     )
 
     with demo:
