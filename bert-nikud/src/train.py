@@ -71,7 +71,7 @@ def main():
         per_device_eval_batch_size=config.batch_size,
         learning_rate=config.learning_rate,
         weight_decay=config.weight_decay,
-        warmup_ratio=config.warmup_ratio,
+        warmup_steps=config.warmup_steps,
         lr_scheduler_type="cosine",
         max_grad_norm=config.max_grad_norm,
         eval_strategy="steps",

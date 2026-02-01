@@ -49,10 +49,10 @@ def get_args():
         help="Weight decay for AdamW",
     )
     parser.add_argument(
-        "--warmup-ratio",
-        type=float,
-        default=0.05,
-        help="Ratio of total steps for linear warmup",
+        "--warmup-steps",
+        type=int,
+        default=100,
+        help="Number of warmup steps for linear schedule",
     )
     parser.add_argument(
         "--max-epochs", type=int, default=10, help="Maximum number of training epochs"
