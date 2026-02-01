@@ -1,3 +1,4 @@
+import multiprocessing
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -59,6 +60,9 @@ def preprocess_dataset(
 ) -> DatasetDict:
     if num_proc is None:
         num_proc = min(6, os.cpu_count() or 1)
+
+    if device and device != "cpu":
+        multiprocessing.set_start_method("spawn", force=True)
 
     return dataset.map(
         lambda batch: prepare_dataset(batch, processor, device=device),
