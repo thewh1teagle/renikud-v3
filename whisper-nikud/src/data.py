@@ -1,4 +1,3 @@
-import multiprocessing
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -58,11 +57,11 @@ def preprocess_dataset(
     batch_size: int = 16,
     device: str | None = None,
 ) -> DatasetDict:
-    if num_proc is None:
-        num_proc = min(6, os.cpu_count() or 1)
-
     if device and device != "cpu":
-        multiprocessing.set_start_method("spawn", force=True)
+        # CUDA can't be used with forked subprocesses, disable multiprocessing
+        num_proc = None
+    elif num_proc is None:
+        num_proc = min(6, os.cpu_count() or 1)
 
     return dataset.map(
         lambda batch: prepare_dataset(batch, processor, device=device),
