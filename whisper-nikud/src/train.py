@@ -53,7 +53,7 @@ def main():
         )
 
     dataset = datasets.load_from_disk(args.dataset_cache_path)
-    max_label_length = model.config.max_length
+    max_label_length = processor.tokenizer.model_max_length
     before_counts = {split: dataset[split].num_rows for split in dataset.keys()}
     dataset = dataset.filter(lambda x: len(x["labels"]) <= max_label_length)
     after_counts = {split: dataset[split].num_rows for split in dataset.keys()}
