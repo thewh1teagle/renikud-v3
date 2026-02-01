@@ -16,6 +16,7 @@ To use with wandb:
 uv run wandb login
 """
 
+import os
 import datasets
 from pathlib import Path
 from transformers import (
@@ -55,7 +56,10 @@ def main():
     dataset = datasets.load_from_disk(args.dataset_cache_path)
     max_label_length = processor.tokenizer.model_max_length
     before_counts = {split: dataset[split].num_rows for split in dataset.keys()}
-    dataset = dataset.filter(lambda x: len(x["labels"]) <= max_label_length)
+    num_proc = min(6, os.cpu_count() or 1)
+    dataset = dataset.filter(
+        lambda x: len(x["labels"]) <= max_label_length, num_proc=num_proc
+    )
     after_counts = {split: dataset[split].num_rows for split in dataset.keys()}
     skipped_counts = {
         split: before_counts[split] - after_counts[split] for split in before_counts
