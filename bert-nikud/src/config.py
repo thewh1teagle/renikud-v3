@@ -31,7 +31,7 @@ def get_args():
         "--eval-split",
         type=str,
         default="val",
-        help="Name of eval split in .cache/ (e.g. val, val_200)",
+        help="Name of eval split in .cache/ (e.g. val)",
     )
     parser.add_argument(
         "--seed", type=int, default=42, help="Random seed for reproducibility"

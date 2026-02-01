@@ -134,7 +134,7 @@ def load_pretokenized(dataset_dir: str, split: str):
 
     Args:
         dataset_dir: Directory containing .cache/ subdirectory
-        split: Split name (e.g. "train", "val", "val_200")
+        split: Split name (e.g. "train", "val")
 
     Returns:
         HuggingFace Dataset

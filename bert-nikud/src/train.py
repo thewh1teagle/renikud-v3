@@ -7,7 +7,7 @@ Pretokenize first:
 Train:
     uv run accelerate launch src/train.py \
         --dataset-dir dataset \
-        --eval-split val_200 \
+        --eval-split val \
         --batch-size 16 \
         --max-epochs 999999 \
         --lr 1e-4 \
